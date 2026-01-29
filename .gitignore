@@ -1,0 +1,8 @@
+node_modules
+dist
+.dev.vars
+wrangler.toml
+.git
+.vscode
+.DS_Store
+*.local
