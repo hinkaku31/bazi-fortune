@@ -1,23 +1,47 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  background-color: #f9f5eb;
-  color: #1a1a1b;
-  font-family: 'Noto Serif JP', serif;
+  --bg-deep-navy: #0a1622;
+  --gold: #c5a059;
+  --vermilion: #b22d35;
+  --off-white: #f9f3e9;
+  --text-primary: #f9f3e9;
+}
+
+body {
+  background-color: var(--bg-deep-navy);
+  color: var(--off-white);
+  font-family: 'Shippori Mincho', 'Noto Serif JP', serif;
 }
 
 .jp-card {
-  @apply bg-white border border-jp-gold/30 shadow-sm rounded-sm;
+  @apply bg-black/40 border border-jp-gold/30 shadow-2xl backdrop-blur-sm rounded-none;
 }
 
 .jp-button-primary {
-  @apply bg-jp-green text-white px-6 py-2 rounded-sm hover:bg-opacity-90 transition-all font-bold tracking-widest;
+  @apply bg-jp-red text-white px-8 py-3 rounded-none hover:bg-opacity-80 transition-all font-bold tracking-[0.2em] border border-jp-gold/50 shadow-lg active:scale-95;
 }
 
 .jp-heading {
-  @apply text-jp-green border-b-2 border-jp-gold/50 pb-2 mb-6 font-bold text-2xl;
+  @apply text-jp-gold border-b border-jp-gold/30 pb-3 mb-8 font-bold text-2xl tracking-[0.1em] flex items-center gap-3;
+}
+
+/* Base text styles for Markdown content */
+.prose-jp {
+  @apply text-off-white/90 leading-loose;
+}
+
+.prose-jp h1,
+.prose-jp h2,
+.prose-jp h3 {
+  @apply text-jp-gold mt-8 mb-4 font-bold border-l-4 border-jp-red pl-4;
+}
+
+.prose-jp strong {
+  @apply text-jp-gold;
 }
