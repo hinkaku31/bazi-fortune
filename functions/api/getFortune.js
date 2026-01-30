@@ -49,8 +49,11 @@ ${period}
 Markdown形式（見出し、箇条書きなど）で、読んで心が洗われるような文章で出力してください。
 `;
 
-        // Updated API Endpoint: v1beta with key in URL for maximum reliability
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+        // Debug logging for Cloudflare environment
+        console.log("GEMINI_API_KEY status:", env.GEMINI_API_KEY ? "Defined" : "Undefined");
+
+        // Updated API Endpoint: v1 with key in URL for maximum reliability
+        const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`;
 
         const response = await fetch(apiUrl, {
             method: "POST",
@@ -59,6 +62,7 @@ Markdown形式（見出し、箇条書きなど）で、読んで心が洗われ
                 contents: [{ parts: [{ text: prompt }] }]
             })
         });
+
 
         if (!response.ok) {
             const errorData = await response.json();
