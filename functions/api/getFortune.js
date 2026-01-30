@@ -14,9 +14,9 @@ export async function onRequestPost(context) {
             });
         }
 
-        if (!env.GEMINI_API_KEY) {
+        if (!env.GROQ_API_KEY) {
             return new Response(JSON.stringify({
-                error: "APIキーが設定されていません。"
+                error: "APIキー (GROQ_API_KEY) が設定されていません。"
             }), {
                 status: 500,
                 headers: { "Content-Type": "application/json" }
@@ -44,13 +44,20 @@ ${period}
 
 Markdown形式（見出し、箇条書きなど）で、読んで心が洗われるような文章で出力してください。`;
 
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+        const apiUrl = "https://api.groq.com/openai/v1/chat/completions";
 
         const response = await fetch(apiUrl, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${env.GROQ_API_KEY}`
+            },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
+                model: "llama-3.3-70b-versatile",
+                messages: [
+                    { role: "user", content: prompt }
+                ],
+                temperature: 0.7
             })
         });
 
@@ -58,7 +65,7 @@ Markdown形式（見出し、箇条書きなど）で、読んで心が洗われ
 
         if (!response.ok) {
             return new Response(JSON.stringify({
-                error: "APIエラーが発生しました。",
+                error: "Groq APIエラーが発生しました。",
                 message: data.error?.message || "Unknown error"
             }), {
                 status: response.status,
@@ -66,7 +73,7 @@ Markdown形式（見出し、箇条書きなど）で、読んで心が洗われ
             });
         }
 
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        const text = data.choices?.[0]?.message?.content;
 
         if (!text) {
             return new Response(JSON.stringify({
