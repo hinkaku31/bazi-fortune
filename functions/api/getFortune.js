@@ -52,8 +52,8 @@ Markdown形式（見出し、箇条書きなど）で、読んで心が洗われ
         // Debug logging for Cloudflare environment
         console.log("GEMINI_API_KEY status:", env.GEMINI_API_KEY ? "Defined" : "Undefined");
 
-        // Updated API Endpoint: v1 with key in URL for maximum reliability
-        const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+        // Updated API Endpoint: v1beta with gemini-1.0-pro for stability/free tier
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent?key=${env.GEMINI_API_KEY}`;
 
         const response = await fetch(apiUrl, {
             method: "POST",
