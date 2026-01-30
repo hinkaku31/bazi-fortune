@@ -49,8 +49,8 @@ ${period}
 Markdown形式（見出し、箇条書きなど）で、読んで心が洗われるような文章で出力してください。
 `;
 
-        // Updated API Endpoint: v1beta and gemini-1.5-flash
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+        // Updated API Endpoint: v1beta and gemini-1.5-flash-latest
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${env.GEMINI_API_KEY}`;
 
         const response = await fetch(apiUrl, {
             method: "POST",
