@@ -33,15 +33,47 @@ body {
 
 /* Base text styles for Markdown content */
 .prose-jp {
-  @apply text-off-white/90 leading-loose;
+  @apply text-off-white/90 leading-relaxed;
+}
+
+.prose-jp p {
+  @apply mb-6;
 }
 
 .prose-jp h1,
 .prose-jp h2,
 .prose-jp h3 {
-  @apply text-jp-gold mt-8 mb-4 font-bold border-l-4 border-jp-red pl-4;
+  @apply text-jp-gold mt-10 mb-6 font-bold border-l-4 border-jp-red pl-4 tracking-wider;
+}
+
+.prose-jp h1 {
+  @apply text-2xl;
+}
+
+.prose-jp h2 {
+  @apply text-xl;
+}
+
+.prose-jp h3 {
+  @apply text-lg;
 }
 
 .prose-jp strong {
-  @apply text-jp-gold;
+  @apply text-jp-gold font-bold;
+}
+
+.prose-jp ul {
+  @apply list-disc list-inside mb-6 space-y-2;
+}
+
+.prose-jp ol {
+  @apply list-decimal list-inside mb-6 space-y-2;
+}
+
+.prose-jp li {
+  @apply ml-2;
+}
+
+.prose-jp hr {
+  @apply border-jp-gold/20 my-10;
 }

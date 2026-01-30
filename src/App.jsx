@@ -3,6 +3,8 @@ import { calculateBazi, calculateElements } from './engine/baziEngine';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
 import { Moon, Sun, Calendar, Clock, Share2, Users, Loader2, Sparkles, AlertCircle } from 'lucide-react';
 import { generateShareUrl, decodeBaziData } from './utils/share';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 const App = () => {
     const [birthData, setBirthData] = useState({ date: '', time: '' });
@@ -245,7 +247,7 @@ const App = () => {
                                     </span>
                                 </div>
 
-                                <div className="prose-jp max-w-none whitespace-pre-wrap">
+                                <div className="prose-jp max-w-none">
                                     {loading ? (
                                         <div className="flex flex-col items-center justify-center py-24 text-[#c5a059]">
                                             <Loader2 className="animate-spin mb-6" size={48} strokeWidth={1} />
@@ -269,7 +271,11 @@ const App = () => {
                                             )}
                                         </div>
                                     ) : (
-                                        fortuneText || <p className="text-center py-20 opacity-30 italic">鑑定結果がここに表示されます</p>
+                                        fortuneText ? (
+                                            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked(fortuneText)) }} />
+                                        ) : (
+                                            <p className="text-center py-20 opacity-30 italic">鑑定結果がここに表示されます</p>
+                                        )
                                     )}
                                 </div>
 
