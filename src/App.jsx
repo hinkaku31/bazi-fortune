@@ -52,10 +52,18 @@ const App = () => {
                     period: periodMap[activeTab]
                 })
             });
+
             const data = await response.json();
-            setFortuneText(data.fortune || '鑑定結果の取得に失敗しました。');
+
+            if (!response.ok) {
+                console.error('Fortune API Error:', data);
+                setFortuneText(`【鑑定失敗】${data.error || '不明なエラー'}\n詳細: ${data.details || JSON.stringify(data.debug || 'なし')}`);
+            } else {
+                setFortuneText(data.fortune || '鑑定結果の解析に失敗しました。');
+            }
         } catch (err) {
-            setFortuneText('接続エラーが発生しました。');
+            console.error('Fetch Error:', err);
+            setFortuneText(`【接続エラー】サーバーと通信できませんでした。(${err.message})`);
         } finally {
             setLoading(false);
         }
