@@ -12,11 +12,14 @@ export default {
                 'jp-gold': '#c5a059',
                 'jp-red': '#b22d35',
                 'jp-paper': '#f9f5eb',
+                'off-white': '#f9f3e9',
+                'jp-navy': '#0a1622',
             },
             fontFamily: {
-                serif: ['"Noto Serif JP"', 'serif'],
+                serif: ['"Shippori Mincho"', '"Noto Serif JP"', 'serif'],
             },
         },
     },
     plugins: [],
 }
+
