@@ -116,23 +116,28 @@ ${volumeInstruction}
 鑑定を開始せよ：`;
         }
 
-        // リトライ機能付きのフェッチ処理
+        // リトライ機能付きのフェッチ処理（タイムアウト延長 45秒）
         const fetchWithRetry = async (url, options, retries = 3, backoff = 2000) => {
             for (let i = 0; i < retries; i++) {
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), 45000); // 45秒タイムアウト
+
                 try {
-                    const response = await fetch(url, options);
+                    const response = await fetch(url, { ...options, signal: controller.signal });
+                    clearTimeout(id);
+
                     if (response.ok) return response;
 
-                    // 429 (Too Many Requests) や 500番台のエラーのみリトライ
                     if (response.status === 429 || response.status >= 500) {
                         const errorText = await response.text();
                         console.warn(`Attempt ${i + 1} failed: ${response.status}`, errorText);
-                        await new Promise(resolve => setTimeout(resolve, backoff * (i + 1))); // 指数バックオフ
+                        await new Promise(resolve => setTimeout(resolve, backoff * (i + 1)));
                         continue;
                     }
 
-                    return response; // その他のエラーはそのまま返す
+                    return response;
                 } catch (error) {
+                    clearTimeout(id);
                     console.warn(`Attempt ${i + 1} network error:`, error);
                     await new Promise(resolve => setTimeout(resolve, backoff * (i + 1)));
                 }
@@ -167,7 +172,7 @@ ${existingText}
                     }
                 ],
                 temperature: 0.7,
-                stream: true // ストリーミングを有効化
+                stream: true
             })
         });
 
@@ -179,12 +184,57 @@ ${existingText}
             });
         }
 
-        // ストリームをそのままクライアントに返す
-        return new Response(response.body, {
+        const { readable, writable } = new TransformStream();
+        const writer = writable.getWriter();
+        const reader = response.body.getReader();
+        const encoder = new TextEncoder();
+        const decoder = new TextDecoder();
+
+        // ストリーミング処理の堅牢化（バックグラウンド実行）
+        context.waitUntil((async () => {
+            try {
+                let buffer = "";
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // 最後の不完全な行をバッファに残す
+
+                    for (const line of lines) {
+                        if (line.trim() === '') continue;
+                        if (line.trim() === 'data: [DONE]') continue;
+
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const json = JSON.parse(line.slice(6));
+                                // DeepSeek R1の思考プロセス(reasoning)を除外し、コンテンツのみ抽出
+                                const content = json.choices[0]?.delta?.content || "";
+
+                                if (content) {
+                                    await writer.write(encoder.encode(content));
+                                }
+                            } catch (e) {
+                                console.warn("JSON Parse Error (ignoring chunk):", e.message);
+                                // 無視して次へ
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Stream processing error:", err);
+                await writer.write(encoder.encode("\n\n[システム通信エラー: ページを再読み込みするか、しばらくして再試行してください]"));
+            } finally {
+                await writer.close();
+            }
+        })());
+
+        return new Response(readable, {
             headers: {
-                'Content-Type': 'text/event-stream',
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive'
+                "Content-Type": "text/event-stream",
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive"
             }
         });
 

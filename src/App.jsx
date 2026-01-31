@@ -161,13 +161,22 @@ const App = () => {
                 }
             }
         } catch (err) {
-            console.error(`Fetch error for ${topic}:`, err);
+            console.error(`[FATAL] Fetch error for ${topic}:`, err);
+            // エラーオブジェクトの詳細をコンソールに出力
+            if (err.message) console.error("Error Message:", err.message);
+            if (err.stack) console.error("Error Stack:", err.stack);
+
             if (retryCount > 0) {
-                setLoadingMessage(prev => ({ ...prev, [topic]: `再接続しています...` }));
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                return fetchFortuneItem(topic, currentBazi, currentElements, accumulatedText || existingText, retryCount - 1);
+                console.log(`Retrying ${topic}... (${retryCount} attempts left)`);
+                setLoadingMessage(prev => ({ ...prev, [topic]: `通信エラー。再接続中...` }));
+                // 3秒待機してからリトライ（コンテキストを維持）
+                setTimeout(() => {
+                    fetchFortuneItem(topic, currentBazi, currentElements, accumulatedText, retryCount - 1);
+                }, 3000);
+            } else {
+                setLoadingItems(prev => ({ ...prev, [topic]: false }));
+                setErrorInfo({ title: '鑑定エラー', message: `${labels[topic] || topic}の生成が中断されました。再鑑定をお試しください。` });
             }
-            setErrorInfo({ title: '鑑定エラー', message: `${labels[topic] || topic}の生成が中断されました。再鑑定をお試しください。` });
         } finally {
             setLoadingItems(prev => ({ ...prev, [topic]: false }));
             setLoadingMessage(prev => ({ ...prev, [topic]: '' }));
