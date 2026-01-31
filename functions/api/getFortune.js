@@ -131,14 +131,15 @@ ${volumeInstruction}
                         return response;
                     }
 
-                    const errorText = await response.text();
-                    console.warn(`[API Error] Attempt ${i + 1} failed: Status ${response.status}`, errorText);
-
+                    // エラー時のみ本文を読み取る
                     if (response.status === 429 || response.status >= 500) {
+                        const errorText = await response.text();
+                        console.warn(`[API Error] Attempt ${i + 1} failed: Status ${response.status}`, errorText);
                         await new Promise(resolve => setTimeout(resolve, backoff * (i + 1)));
                         continue;
                     }
 
+                    // その他のエラー（400等）はそのまま返す（呼び出し元で処理）
                     return response;
                 } catch (error) {
                     clearTimeout(id);

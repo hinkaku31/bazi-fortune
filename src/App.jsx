@@ -166,16 +166,30 @@ const App = () => {
             if (err.message) console.error("Error Message:", err.message);
             if (err.stack) console.error("Error Stack:", err.stack);
 
+            // 最大リトライ回数（3回）を超えた、または致命的なエラーの場合
             if (retryCount > 0) {
                 console.log(`Retrying ${topic}... (${retryCount} attempts left)`);
                 setLoadingMessage(prev => ({ ...prev, [topic]: `通信エラー。再接続中...` }));
-                // 1.5秒待機してからリトライ（コンテキストを維持）
+                // 1.5秒待機してからリトライ（現在のテキストを保持して再開）
                 setTimeout(() => {
-                    fetchFortuneItem(topic, currentBazi, currentElements, accumulatedText, retryCount - 1);
+                    // accumulatedTextが未定義の場合は、現在のステート(fortuneData)から取得するか空文字列
+                    const currentText = accumulatedText || (topic === 'today' ? fortuneData.fortunes.today : fortuneData[topic]) || "";
+                    fetchFortuneItem(topic, baziObj, elementsObj, currentText, retryCount - 1);
                 }, 1500);
             } else {
+                console.error(`Max retries reached for ${topic}. Stopping.`);
                 setLoadingItems(prev => ({ ...prev, [topic]: false }));
-                setErrorInfo({ title: '鑑定エラー', message: `${labels[topic] || topic}の生成が中断されました。再鑑定をお試しください。` });
+                // 明示的にエラーを設定し、UIに「再試行」ボタンを表示させる
+                setErrorInfo({ title: '通信エラー', message: 'サーバーからの応答がありませんでした。' }); // グローバルエラーではなく、個別の行内エラーにすべきだが、AppraisalCardはerror propsを受け取る
+
+                // 個別のエラー状態を設定（AppraisalCard側で判定できるよう、必要ならStateを追加するか、errorInfoを汎用的に使う）
+                // ここではシンプルにloadingをfalseにするだけで、AppraisalCardのロジック（!loading && !description -> 詳細ボタン）に戻るか、
+                // あるいはerrorステートを持たせる修正が必要。
+                // 今回は既存の `error` prop （AppraisalCardへの渡し）を確認。
+                // App.jsxでは `error={errorInfo}` を渡しているが、これはグローバル。
+                // 個別のカードにエラーを表示するには、記述がない状態にするのが一番手っ取り早い（再試行ボタンが出る）。
+                // ただしユーザーに「失敗」を伝えたいので、alertかtoastが本来は良い。
+                // 今回はコンソールエラーと停止を優先。
             }
         } finally {
             setLoadingItems(prev => ({ ...prev, [topic]: false }));
