@@ -20,17 +20,53 @@ const App = () => {
     });
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [fortuneData, setFortuneData] = useState(null);
+    const [fortuneData, setFortuneData] = useState({
+        nature: '', social: '', partner: '',
+        fortunes: { today: '', tomorrow: '', thisWeek: '', thisMonth: '', thisYear: '', luckyPoints: null }
+    });
+    const [loadingItems, setLoadingItems] = useState({});
     const [errorInfo, setErrorInfo] = useState(null);
     const [activeFortuneTab, setActiveFortuneTab] = useState('today');
 
-    const yearOptions = Array.from({ length: 101 }, (_, i) => ({ value: `${1950 + i}`, label: `${1950 + i}年` }));
-    const monthOptions = Array.from({ length: 12 }, (_, i) => ({ value: `${i + 1}`, label: `${i + 1}月` }));
-    const dayOptions = Array.from({ length: 31 }, (_, i) => ({ value: `${i + 1}`, label: `${i + 1}日` }));
-    const hourOptions = [
-        { value: '不明', label: '不明' },
-        ...Array.from({ length: 24 }, (_, i) => ({ value: `${i}:00`, label: `${i}時` }))
-    ];
+    const cleanText = (text) => (text || '').replace(/\*\*/g, '');
+
+    const fetchFortuneItem = async (topic, currentBazi, currentElements) => {
+        if (loadingItems[topic]) return;
+        setLoadingItems(prev => ({ ...prev, [topic]: true }));
+        try {
+            const response = await fetch('/api/getFortune', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bazi: currentBazi || result?.bazi,
+                    elements: currentElements || result?.elements,
+                    topic
+                })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                if (topic === 'initial_profile') {
+                    setFortuneData(prev => ({
+                        ...prev,
+                        nature: data.nature, social: data.social, partner: data.partner
+                    }));
+                } else {
+                    setFortuneData(prev => ({
+                        ...prev,
+                        fortunes: {
+                            ...prev.fortunes,
+                            [topic]: data.content,
+                            luckyPoints: topic === 'today' ? data.luckyPoints : prev.fortunes.luckyPoints
+                        }
+                    }));
+                }
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoadingItems(prev => ({ ...prev, [topic]: false }));
+        }
+    };
 
     const handleCalculate = async (e) => {
         if (e) e.preventDefault();
@@ -41,7 +77,12 @@ const App = () => {
 
         setLoading(true);
         setErrorInfo(null);
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        setFortuneData({
+            nature: '', social: '', partner: '',
+            fortunes: { today: '', tomorrow: '', thisWeek: '', thisMonth: '', thisYear: '', luckyPoints: null }
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         try {
             const dateStr = `${birthData.year}-${birthData.month.padStart(2, '0')}-${birthData.day.padStart(2, '0')}`;
@@ -50,20 +91,13 @@ const App = () => {
             const elements = calculateElements(bazi);
 
             setResult({ bazi, elements });
+            setActiveFortuneTab('today');
 
-            const response = await fetch('/api/getFortune', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ bazi, elements, period: '総合鑑定' })
-            });
-
-            const data = await response.json();
-            if (response.ok) {
-                setFortuneData(data);
-            } else {
-                setFortuneData(null);
-                setErrorInfo({ title: 'AI鑑定失敗', message: data.message });
-            }
+            // 最初に本質と今日を取得
+            await Promise.all([
+                fetchFortuneItem('initial_profile', bazi, elements),
+                fetchFortuneItem('today', bazi, elements)
+            ]);
         } catch (err) {
             console.error(err);
             setErrorInfo({ title: '接続エラー', message: '再試行してください。' });
@@ -71,6 +105,20 @@ const App = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (result && activeFortuneTab !== 'luckyPoints' && !fortuneData.fortunes[activeFortuneTab]) {
+            fetchFortuneItem(activeFortuneTab);
+        }
+    }, [activeFortuneTab, result]);
+
+    const yearOptions = Array.from({ length: 101 }, (_, i) => ({ value: `${1950 + i}`, label: `${1950 + i}年` }));
+    const monthOptions = Array.from({ length: 12 }, (_, i) => ({ value: `${i + 1}`, label: `${i + 1}月` }));
+    const dayOptions = Array.from({ length: 31 }, (_, i) => ({ value: `${i + 1}`, label: `${i + 1}日` }));
+    const hourOptions = [
+        { value: '不明', label: '不明' },
+        ...Array.from({ length: 24 }, (_, i) => ({ value: `${i}:00`, label: `${i}時` }))
+    ];
 
     const getFortuneLabel = (key) => {
         const labels = { today: '今日', tomorrow: '明日', thisWeek: '今週', thisMonth: '今月', thisYear: '今年' };
@@ -84,6 +132,8 @@ const App = () => {
         setShowCopyToast(true);
         setTimeout(() => setShowCopyToast(false), 2000);
     };
+
+    const tabKeys = ['today', 'tomorrow', 'thisWeek', 'thisMonth', 'thisYear'];
 
     return (
         <div className="min-h-screen bg-white text-[#2d3436] font-serif selection:bg-gray-100 pb-20">
@@ -159,9 +209,12 @@ const App = () => {
                         </div>
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                             <div className="lg:col-span-2 space-y-8">
-                                <AppraisalCard title="あなたの本質" char={result.bazi.nicchuu[0]} type="nature" description={fortuneData?.nature || "解析中..."} />
-                                <AppraisalCard title="社会的な性質" char={result.bazi.gecchuu[1]} type="social" description={fortuneData?.social || "解析中..."} />
-                                <AppraisalCard title="人生のパートナー" char={result.bazi.nicchuu[1]} type="partner" description={fortuneData?.partner || "解析中..."} />
+                                <AppraisalCard title="あなたの本質" char={result.bazi.nicchuu[0]} type="nature"
+                                    description={loadingItems['initial_profile'] ? "魂を読み解いています..." : cleanText(fortuneData.nature) || "解析中..."} />
+                                <AppraisalCard title="社会的な性質" char={result.bazi.gecchuu[1]} type="social"
+                                    description={loadingItems['initial_profile'] ? "使命を読み解いています..." : cleanText(fortuneData.social) || "解析中..."} />
+                                <AppraisalCard title="人生のパートナー" char={result.bazi.nicchuu[1]} type="partner"
+                                    description={loadingItems['initial_profile'] ? "縁を読み解いています..." : cleanText(fortuneData.partner) || "解析中..."} />
                             </div>
                             <div className="lg:col-span-1"><AnalysisTable result={result.bazi} rawElements={result.elements} /></div>
                         </div>
@@ -171,22 +224,25 @@ const App = () => {
                                 <h2 className="text-xl font-bold tracking-widest">これからの運勢</h2>
                             </div>
                             <div className="flex flex-wrap gap-2 mb-8">
-                                {fortuneData && fortuneData.fortunes && Object.keys(fortuneData.fortunes)
-                                    .filter(key => key !== 'luckyPoints')
-                                    .map((key) => (
-                                        <button key={key} onClick={() => setActiveFortuneTab(key)}
-                                            className={`px-4 py-2 rounded-lg text-sm transition-all ${activeFortuneTab === key ? 'bg-jp-gold text-white font-bold' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}>
-                                            {getFortuneLabel(key)}
-                                        </button>
-                                    ))}
+                                {tabKeys.map((key) => (
+                                    <button key={key} onClick={() => setActiveFortuneTab(key)}
+                                        className={`px-4 py-2 rounded-lg text-sm transition-all ${activeFortuneTab === key ? 'bg-jp-gold text-white font-bold' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}>
+                                        {getFortuneLabel(key)}
+                                    </button>
+                                ))}
                             </div>
                             <div className="prose-jp text-gray-600 min-h-[200px] animate-in fade-in duration-500">
-                                {fortuneData ? (
+                                {loadingItems[activeFortuneTab] ? (
+                                    <div className="flex items-center justify-center h-40 text-gray-300 italic animate-pulse">
+                                        <Clock size={20} className="mr-2 animate-spin" />
+                                        極限鑑定書を執筆しています...
+                                    </div>
+                                ) : fortuneData.fortunes[activeFortuneTab] ? (
                                     <>
                                         <div
                                             className="leading-relaxed whitespace-pre-wrap markdown-content"
                                             dangerouslySetInnerHTML={{
-                                                __html: DOMPurify.sanitize(marked(fortuneData.fortunes[activeFortuneTab] || ''))
+                                                __html: DOMPurify.sanitize(marked(cleanText(fortuneData.fortunes[activeFortuneTab])))
                                             }}
                                         />
 
@@ -208,7 +264,7 @@ const App = () => {
                                         )}
                                     </>
                                 ) : (
-                                    <p className="text-gray-300 italic">運勢データを生成しています...</p>
+                                    <p className="text-gray-300 italic">鑑定を選択してください。</p>
                                 )}
                             </div>
                         </div>
