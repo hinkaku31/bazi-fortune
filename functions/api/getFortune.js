@@ -269,7 +269,12 @@ ${existingText}
         });
 
     } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
+        console.error('[getFortune API Error]', error);
+        console.error('Error stack:', error.stack);
+        return new Response(JSON.stringify({
+            error: error.message || '予期しないエラーが発生しました',
+            details: error.stack
+        }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         });

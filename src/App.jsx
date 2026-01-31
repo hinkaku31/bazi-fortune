@@ -56,6 +56,9 @@ const App = () => {
         setLoadingItems(prev => ({ ...prev, [topic]: true }));
         setLoadingMessage(prev => ({ ...prev, [topic]: existingText ? `${labels[topic] || topic}を続きから解析中...` : `${labels[topic] || topic}を解析中...` }));
 
+        // accumulatedTextをtryブロックの外で宣言（catchブロックからもアクセス可能にする）
+        let accumulatedText = existingText || "";
+
         try {
             const response = await fetch('/api/getFortune', {
                 method: 'POST',
@@ -75,7 +78,6 @@ const App = () => {
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
-            let accumulatedText = existingText; // 既存テキストから開始
 
             while (true) {
                 const { done, value } = await reader.read();
