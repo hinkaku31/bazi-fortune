@@ -108,6 +108,18 @@ const App = () => {
                                     ))}
                                 </div>
                             </div>
+                            <div className="bg-gray-50/50 p-6 rounded-xl border border-gray-100 text-sm leading-relaxed text-gray-500">
+                                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                                    <Layout size={16} className="text-jp-gold" />
+                                    【命式計算の使い方】
+                                </h4>
+                                <p>
+                                    生年月日と生まれた時間、性別を選択して計算ボタンを押すことで命式表が表示されます。
+                                    命式表（五行・蔵干・通変星・十二運・特殊星・身旺・身弱・格局等を含む）に加えて大運（10年ごとの運勢）、歳運（1年ごとの運勢）や各項目の五行、パワー、喜神・忌神（ある場合）も表示されます。
+                                    それぞれの五行や吉凶が色分けされていたり、生まれてから10年先までの歳運が自動計算されますので、色々とご活用ください。
+                                </p>
+                            </div>
+
                             <button type="submit" className="jp-button-primary w-full py-5 text-xl mt-4 group">
                                 <span className="flex items-center justify-center gap-2">
                                     解析を開始する<Sparkles size={20} className="group-hover:rotate-12 transition-transform" />
@@ -168,6 +180,22 @@ const App = () => {
                 </div>
             </main>
             <footer className="mt-20 pt-16 pb-12 text-center border-t border-gray-50">
+                <div className="max-w-4xl mx-auto px-6 mb-12">
+                    <p className="text-[10px] text-gray-400 tracking-[0.2em] uppercase mb-6">Share this session</p>
+                    <div className="flex flex-wrap justify-center gap-4">
+                        {[
+                            { name: 'X', color: 'bg-black', url: `https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent('本格四柱推命：AIが解き明かす運命の深淵')}` },
+                            { name: 'Facebook', color: 'bg-[#1877F2]', url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}` },
+                            { name: 'LINE', color: 'bg-[#06C755]', url: `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(window.location.href)}` },
+                            { name: 'Pinterest', color: 'bg-[#E60023]', url: `https://www.pinterest.com/pin/create/button/?url=${encodeURIComponent(window.location.href)}` }
+                        ].map((sns) => (
+                            <a key={sns.name} href={sns.url} target="_blank" rel="noopener noreferrer"
+                                className={`px-6 py-2 rounded-full ${sns.color} text-white text-xs font-bold tracking-widest hover:opacity-80 transition-opacity shadow-sm`}>
+                                {sns.name}
+                            </a>
+                        ))}
+                    </div>
+                </div>
                 <p className="text-[10px] tracking-[0.5em] text-gray-300 uppercase mb-4">&copy; 2026 BAJI FORTUNE / AI ANALYSIS</p>
             </footer>
         </div>

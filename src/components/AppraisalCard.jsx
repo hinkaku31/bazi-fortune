@@ -9,12 +9,8 @@ const AppraisalCard = ({ title, char, description, type = 'nature' }) => {
     return (
         <div className="jp-card mb-8">
             <div className="flex flex-col items-center mb-6">
-                <div className="relative w-32 h-32 mb-4 flex items-center justify-center bg-gray-50 rounded-full border-2 border-gray-100 shadow-inner overflow-hidden">
-                    <span className="text-6xl font-bold text-gray-200 absolute">{char}</span>
-                    <div className="z-10 text-4xl">🐱</div> {/* キャラクタープレースホルダ */}
-                </div>
-                <h2 className="text-2xl font-bold tracking-widest">{title}</h2>
-                <div className="h-1 w-12 bg-gray-800 mt-2"></div>
+                <h2 className="text-2xl font-bold tracking-widest text-jp-dark">{title}</h2>
+                <div className="h-0.5 w-16 bg-jp-gold mt-3 shadow-sm"></div>
             </div>
 
             <div className="prose-jp max-w-none text-gray-700 leading-relaxed font-light">
