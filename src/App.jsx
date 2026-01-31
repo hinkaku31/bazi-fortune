@@ -21,10 +21,11 @@ const App = () => {
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
     const [fortuneData, setFortuneData] = useState({
-        nature: '', social: '', partner: '',
+        nature: '', social: '', partner: '', jobSuccess: '',
         fortunes: { today: '', tomorrow: '', thisWeek: '', thisMonth: '', thisYear: '', luckyPoints: null }
     });
     const [loadingItems, setLoadingItems] = useState({});
+    const [loadingMessage, setLoadingMessage] = useState({});
     const [errorInfo, setErrorInfo] = useState(null);
     const [activeFortuneTab, setActiveFortuneTab] = useState('today');
 
@@ -40,9 +41,20 @@ const App = () => {
             .trim();
     };
 
-    const fetchFortuneItem = async (topic, currentBazi, currentElements) => {
-        if (loadingItems[topic]) return;
+    const fetchFortuneItem = async (topic, currentBazi, currentElements, retryCount = 1) => {
+        if (loadingItems[topic] && retryCount === 1) return;
+
+        const labels = {
+            nature: 'あなたの本質', social: '社会的使命', partner: '人生のパートナー', job_success: '適職と成功の鍵',
+            today: '今日の運勢', tomorrow: '明日の運勢', thisWeek: '今週の運勢', thisMonth: '今月の運勢', thisYear: '今年の運勢'
+        };
+
         setLoadingItems(prev => ({ ...prev, [topic]: true }));
+        setLoadingMessage(prev => ({ ...prev, [topic]: `${labels[topic] || topic}を深く解析しています...` }));
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒でタイムアウト（10sより少し余裕を持たせる）
+
         try {
             const response = await fetch('/api/getFortune', {
                 method: 'POST',
@@ -51,19 +63,21 @@ const App = () => {
                     bazi: currentBazi || result?.bazi,
                     elements: currentElements || result?.elements,
                     topic
-                })
+                }),
+                signal: controller.signal
             });
 
+            clearTimeout(timeoutId);
             const data = await response.json();
 
             if (!response.ok) {
                 throw new Error(data.error || '不明なエラー');
             }
 
-            if (topic === 'initial_profile') {
+            if (['nature', 'social', 'partner', 'job_success'].includes(topic)) {
                 setFortuneData(prev => ({
                     ...prev,
-                    nature: data.nature, social: data.social, partner: data.partner
+                    [topic === 'job_success' ? 'jobSuccess' : topic]: data.content
                 }));
             } else {
                 setFortuneData(prev => ({
@@ -76,10 +90,19 @@ const App = () => {
                 }));
             }
         } catch (err) {
-            console.error(err);
-            setErrorInfo({ title: '鑑定エラー', message: '鑑定文の生成中に問題が発生しました。時間をおいて再度お試しください。' });
+            clearTimeout(timeoutId);
+            console.error(`Fetch error for ${topic}:`, err);
+
+            if (retryCount > 0) {
+                setLoadingMessage(prev => ({ ...prev, [topic]: `再試行しています... (${retryCount})` }));
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                return fetchFortuneItem(topic, currentBazi, currentElements, retryCount - 1);
+            }
+
+            setErrorInfo({ title: '鑑定エラー', message: `${labels[topic] || topic}の生成中に問題が発生しました。再度お試しください。` });
         } finally {
             setLoadingItems(prev => ({ ...prev, [topic]: false }));
+            setLoadingMessage(prev => ({ ...prev, [topic]: '' }));
         }
     };
 
@@ -108,11 +131,11 @@ const App = () => {
             setResult({ bazi, elements });
             setActiveFortuneTab('today');
 
-            // 最初に本質と今日を取得
-            await Promise.all([
-                fetchFortuneItem('initial_profile', bazi, elements),
-                fetchFortuneItem('today', bazi, elements)
-            ]);
+            // 順次生成（本質→社会→パートナー→適職）
+            await fetchFortuneItem('nature', bazi, elements);
+            await fetchFortuneItem('social', bazi, elements);
+            await fetchFortuneItem('partner', bazi, elements);
+            await fetchFortuneItem('job_success', bazi, elements);
         } catch (err) {
             console.error(err);
             setErrorInfo({ title: '解析失敗', message: '命式の計算中にエラーが発生しました。' });
@@ -235,11 +258,13 @@ const App = () => {
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                             <div className="lg:col-span-2 space-y-8">
                                 <AppraisalCard title="あなたの本質" char={result.bazi.nicchuu[0]} type="nature"
-                                    description={loadingItems['initial_profile'] ? "魂を読み解いています..." : cleanText(fortuneData.nature) || "解析中..."} />
+                                    description={loadingItems['nature'] ? loadingMessage['nature'] : cleanText(fortuneData.nature) || "解析を待機中..."} />
                                 <AppraisalCard title="社会的な性質" char={result.bazi.gecchuu[1]} type="social"
-                                    description={loadingItems['initial_profile'] ? "使命を読み解いています..." : cleanText(fortuneData.social) || "解析中..."} />
+                                    description={loadingItems['social'] ? loadingMessage['social'] : cleanText(fortuneData.social) || "解析を待機中..."} />
                                 <AppraisalCard title="人生のパートナー" char={result.bazi.nicchuu[1]} type="partner"
-                                    description={loadingItems['initial_profile'] ? "縁を読み解いています..." : cleanText(fortuneData.partner) || "解析中..."} />
+                                    description={loadingItems['partner'] ? loadingMessage['partner'] : cleanText(fortuneData.partner) || "解析を待機中..."} />
+                                <AppraisalCard title="適職と成功の鍵" char={result.bazi.jichuu[1]} type="job_success"
+                                    description={loadingItems['job_success'] ? loadingMessage['job_success'] : cleanText(fortuneData.jobSuccess) || "解析を待機中..."} />
                             </div>
                             <div className="lg:col-span-1"><AnalysisTable result={result.bazi} rawElements={result.elements} /></div>
                         </div>
