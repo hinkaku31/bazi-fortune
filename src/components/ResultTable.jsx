@@ -10,14 +10,13 @@ const ResultTable = ({ result }) => {
 
     const getElementColor = (char) => {
         const mapping = {
-            "甲": "wood", "乙": "wood", "寅": "wood", "卯": "wood",
-            "丙": "fire", "丁": "fire", "巳": "fire", "午": "fire",
-            "戊": "earth", "己": "earth", "辰": "earth", "戌": "earth", "丑": "earth", "未": "earth",
-            "庚": "metal", "辛": "metal", "申": "metal", "酉": "metal",
-            "壬": "water", "癸": "water", "亥": "water", "子": "water"
+            "甲": "#E3F2FD", "乙": "#E3F2FD", "寅": "#E3F2FD", "卯": "#E3F2FD",
+            "丙": "#FFEBEE", "丁": "#FFEBEE", "巳": "#FFEBEE", "午": "#FFEBEE",
+            "戊": "#FFFDE7", "己": "#FFFDE7", "辰": "#FFFDE7", "戌": "#FFFDE7", "丑": "#FFFDE7", "未": "#FFFDE7",
+            "庚": "#ffffff", "辛": "#ffffff", "申": "#ffffff", "酉": "#ffffff",
+            "壬": "#F5F5F5", "癸": "#F5F5F5", "亥": "#F5F5F5", "子": "#F5F5F5"
         };
-        const key = mapping[char] || "metal";
-        return `var(--element-${key})`;
+        return mapping[char] || "#ffffff";
     };
 
     const getPowerStars = (power) => "★".repeat(power) + "☆".repeat(5 - power);

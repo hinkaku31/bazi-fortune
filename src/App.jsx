@@ -28,7 +28,17 @@ const App = () => {
     const [errorInfo, setErrorInfo] = useState(null);
     const [activeFortuneTab, setActiveFortuneTab] = useState('today');
 
-    const cleanText = (text) => (text || '').replace(/\*\*/g, '');
+    const cleanText = (text) => {
+        if (!text) return '';
+        return text
+            .replace(/#{1,6}\s?/g, '') // remove headers
+            .replace(/\*\*/g, '')      // remove bold
+            .replace(/\*/g, '')       // remove italic/bullets
+            .replace(/__+/g, '')      // remove underline patterns
+            .replace(/`{1,3}/g, '')    // remove code blocks
+            .replace(/^\s*-\s/gm, '')  // remove list markers
+            .trim();
+    };
 
     const fetchFortuneItem = async (topic, currentBazi, currentElements) => {
         if (loadingItems[topic]) return;
@@ -43,26 +53,31 @@ const App = () => {
                     topic
                 })
             });
+
             const data = await response.json();
-            if (response.ok) {
-                if (topic === 'initial_profile') {
-                    setFortuneData(prev => ({
-                        ...prev,
-                        nature: data.nature, social: data.social, partner: data.partner
-                    }));
-                } else {
-                    setFortuneData(prev => ({
-                        ...prev,
-                        fortunes: {
-                            ...prev.fortunes,
-                            [topic]: data.content,
-                            luckyPoints: topic === 'today' ? data.luckyPoints : prev.fortunes.luckyPoints
-                        }
-                    }));
-                }
+
+            if (!response.ok) {
+                throw new Error(data.error || '不明なエラー');
+            }
+
+            if (topic === 'initial_profile') {
+                setFortuneData(prev => ({
+                    ...prev,
+                    nature: data.nature, social: data.social, partner: data.partner
+                }));
+            } else {
+                setFortuneData(prev => ({
+                    ...prev,
+                    fortunes: {
+                        ...prev.fortunes,
+                        [topic]: data.content,
+                        luckyPoints: topic === 'today' ? data.luckyPoints : prev.fortunes.luckyPoints
+                    }
+                }));
             }
         } catch (err) {
             console.error(err);
+            setErrorInfo({ title: '鑑定エラー', message: '鑑定文の生成中に問題が発生しました。時間をおいて再度お試しください。' });
         } finally {
             setLoadingItems(prev => ({ ...prev, [topic]: false }));
         }
@@ -71,7 +86,7 @@ const App = () => {
     const handleCalculate = async (e) => {
         if (e) e.preventDefault();
         if (!birthData.year || !birthData.month || !birthData.day) {
-            alert('生年月日を選択してください。');
+            alert('生年月日をすべて選択してください。');
             return;
         }
 
@@ -100,7 +115,7 @@ const App = () => {
             ]);
         } catch (err) {
             console.error(err);
-            setErrorInfo({ title: '接続エラー', message: '再試行してください。' });
+            setErrorInfo({ title: '解析失敗', message: '命式の計算中にエラーが発生しました。' });
         } finally {
             setLoading(false);
         }
@@ -112,9 +127,18 @@ const App = () => {
         }
     }, [activeFortuneTab, result]);
 
-    const yearOptions = Array.from({ length: 101 }, (_, i) => ({ value: `${1950 + i}`, label: `${1950 + i}年` }));
-    const monthOptions = Array.from({ length: 12 }, (_, i) => ({ value: `${i + 1}`, label: `${i + 1}月` }));
-    const dayOptions = Array.from({ length: 31 }, (_, i) => ({ value: `${i + 1}`, label: `${i + 1}日` }));
+    const yearOptions = [
+        { value: '', label: '年を選択' },
+        ...Array.from({ length: 121 }, (_, i) => ({ value: `${1920 + i}`, label: `${1920 + i}年` }))
+    ];
+    const monthOptions = [
+        { value: '', label: '月を選択' },
+        ...Array.from({ length: 12 }, (_, i) => ({ value: `${i + 1}`, label: `${i + 1}月` }))
+    ];
+    const dayOptions = [
+        { value: '', label: '日を選択' },
+        ...Array.from({ length: 31 }, (_, i) => ({ value: `${i + 1}`, label: `${i + 1}日` }))
+    ];
     const hourOptions = [
         { value: '不明', label: '不明' },
         ...Array.from({ length: 24 }, (_, i) => ({ value: `${i}:00`, label: `${i}時` }))
@@ -173,7 +197,14 @@ const App = () => {
                                     ))}
                                 </div>
                             </div>
-                            <div className="bg-gray-50/50 p-6 rounded-xl border border-gray-100 text-sm leading-relaxed text-gray-500">
+
+                            <button type="submit" className="jp-button-primary w-full py-5 text-xl mt-4 group">
+                                <span className="flex items-center justify-center gap-2">
+                                    解析を開始する<Sparkles size={20} className="group-hover:rotate-12 transition-transform" />
+                                </span>
+                            </button>
+
+                            <div className="bg-gray-50/50 p-6 rounded-xl border border-gray-100 text-sm leading-relaxed text-gray-500 mt-8">
                                 <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
                                     <Layout size={16} className="text-jp-gold" />
                                     【命式計算の使い方】
@@ -184,12 +215,6 @@ const App = () => {
                                     それぞれの五行や吉凶が色分けされていたり、生まれてから10年先までの歳運が自動計算されますので、色々とご活用ください。
                                 </p>
                             </div>
-
-                            <button type="submit" className="jp-button-primary w-full py-5 text-xl mt-4 group">
-                                <span className="flex items-center justify-center gap-2">
-                                    解析を開始する<Sparkles size={20} className="group-hover:rotate-12 transition-transform" />
-                                </span>
-                            </button>
                         </form>
                     </div>
                 )}
@@ -293,13 +318,13 @@ const App = () => {
                             { name: 'Pinterest', color: 'bg-[#E60023]', label: 'P', url: `https://www.pinterest.com/pin/create/button/?url=${encodeURIComponent(window.location.href)}` },
                         ].map((sns) => (
                             <a key={sns.name} href={sns.url} target="_blank" rel="noopener noreferrer" title={sns.name}
-                                className={`w-10 h-10 rounded-full ${sns.color} text-white text-xs font-bold flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-sm`}>
+                                className={`w-8 h-8 rounded-full ${sns.color} text-white text-[10px] font-bold flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-sm`}>
                                 {sns.label}
                             </a>
                         ))}
                         <button onClick={handleCopyUrl} title="Copy URL"
-                            className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 text-[10px] font-bold border border-gray-100 flex items-center justify-center hover:bg-gray-100 active:scale-95 transition-all">
-                            <Layout size={14} />
+                            className="w-8 h-8 rounded-full bg-gray-50 text-gray-400 text-[10px] font-bold border border-gray-100 flex items-center justify-center hover:bg-gray-100 active:scale-95 transition-all">
+                            <Layout size={12} />
                         </button>
                     </div>
                 </div>
