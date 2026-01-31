@@ -7,13 +7,13 @@ export default {
     theme: {
         extend: {
             colors: {
-                'jp-green': '#1b3022',
-                'jp-black': '#1a1a1b',
+                'jp-pure-white': '#ffffff',
+                'jp-soft-gray': '#f8f9fa',
+                'jp-border': '#e0e0e0',
+                'jp-dark': '#2d3436',
+                'jp-muted': '#636e72',
                 'jp-gold': '#c5a059',
                 'jp-red': '#b22d35',
-                'jp-paper': '#f9f5eb',
-                'off-white': '#f9f3e9',
-                'jp-navy': '#0a1622',
             },
             fontFamily: {
                 serif: ['"Shippori Mincho"', '"Noto Serif JP"', 'serif'],

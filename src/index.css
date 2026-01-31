@@ -6,34 +6,48 @@
 @tailwind utilities;
 
 :root {
-  --bg-deep-navy: #0a1622;
-  --gold: #c5a059;
-  --vermilion: #b22d35;
-  --off-white: #f9f3e9;
-  --text-primary: #f9f3e9;
+  --bg-pure-white: #ffffff;
+  --bg-soft-gray: #f8f9fa;
+  --border-light: #e0e0e0;
+  --text-dark: #2d3436;
+  --text-muted: #636e72;
+  --gold-accent: #c5a059;
+  --red-accent: #b22d35;
+
+  /* 五行Colors (Pastel) */
+  --element-wood: #E3F2FD;
+  /* 青/水色系 */
+  --element-fire: #FFEBEE;
+  /* 赤系 */
+  --element-earth: #FFFDE7;
+  /* 黄系 */
+  --element-metal: #ffffff;
+  /* 白 */
+  --element-water: #F5F5F5;
+  /* 灰/黒系 */
 }
 
 body {
-  background-color: var(--bg-deep-navy);
-  color: var(--off-white);
+  background-color: var(--bg-pure-white);
+  color: var(--text-dark);
   font-family: 'Shippori Mincho', 'Noto Serif JP', serif;
 }
 
 .jp-card {
-  @apply bg-black/40 border border-jp-gold/30 shadow-2xl backdrop-blur-sm rounded-none;
+  @apply bg-white border border-[#e0e0e0] shadow-sm rounded-xl p-6 transition-all duration-300 hover:shadow-md;
 }
 
 .jp-button-primary {
-  @apply bg-jp-red text-white px-8 py-3 rounded-none hover:bg-opacity-80 transition-all font-bold tracking-[0.2em] border border-jp-gold/50 shadow-lg active:scale-95;
+  @apply bg-[#2d3436] text-white px-8 py-3 rounded-full hover:bg-opacity-90 transition-all font-bold tracking-[0.1em] shadow-sm active:scale-95;
 }
 
 .jp-heading {
-  @apply text-jp-gold border-b border-jp-gold/30 pb-3 mb-8 font-bold text-2xl tracking-[0.1em] flex items-center gap-3;
+  @apply text-[#2d3436] font-bold text-2xl tracking-[0.05em] mb-6 flex items-center gap-3;
 }
 
 /* Base text styles for Markdown content */
 .prose-jp {
-  @apply text-off-white/90 leading-relaxed;
+  @apply text-jp-dark leading-relaxed;
 }
 
 .prose-jp p {
