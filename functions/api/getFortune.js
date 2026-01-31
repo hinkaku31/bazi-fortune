@@ -14,9 +14,9 @@ export async function onRequestPost(context) {
             });
         }
 
-        if (!env.GROQ_API_KEY) {
+        if (!env.OPENROUTER_API_KEY) {
             return new Response(JSON.stringify({
-                error: "APIキー (GROQ_API_KEY) が設定されていません。"
+                error: "APIキー (OPENROUTER_API_KEY) が設定されていません。"
             }), {
                 status: 500,
                 headers: { "Content-Type": "application/json" }
@@ -116,14 +116,40 @@ ${volumeInstruction}
 鑑定を開始せよ：`;
         }
 
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        // リトライ機能付きのフェッチ処理
+        const fetchWithRetry = async (url, options, retries = 3, backoff = 2000) => {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) return response;
+
+                    // 429 (Too Many Requests) や 500番台のエラーのみリトライ
+                    if (response.status === 429 || response.status >= 500) {
+                        const errorText = await response.text();
+                        console.warn(`Attempt ${i + 1} failed: ${response.status}`, errorText);
+                        await new Promise(resolve => setTimeout(resolve, backoff * (i + 1))); // 指数バックオフ
+                        continue;
+                    }
+
+                    return response; // その他のエラーはそのまま返す
+                } catch (error) {
+                    console.warn(`Attempt ${i + 1} network error:`, error);
+                    await new Promise(resolve => setTimeout(resolve, backoff * (i + 1)));
+                }
+            }
+            throw new Error(`Failed to fetch after ${retries} retries`);
+        };
+
+        const response = await fetchWithRetry('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${context.env.GROQ_API_KEY}`,
+                'Authorization': `Bearer ${context.env.OPENROUTER_API_KEY}`,
+                'HTTP-Referer': 'https://github.com/hinkaku31/bazi-fortune',
+                'X-Title': 'Bazi Fortune Teller',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'llama-3.3-70b-versatile',
+                model: 'deepseek/deepseek-r1:free',
                 messages: [
                     { role: 'system', content: systemPrompt },
                     {
@@ -141,7 +167,6 @@ ${existingText}
                     }
                 ],
                 temperature: 0.7,
-                max_tokens: 4000,
                 stream: true // ストリーミングを有効化
             })
         });
