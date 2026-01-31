@@ -7,6 +7,8 @@ import AnalysisTable from './components/AnalysisTable';
 import AppraisalCard from './components/AppraisalCard';
 import AnalyzingAnimation from './components/AnalyzingAnimation';
 import CustomSelect from './components/CustomSelect';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 const App = () => {
     const [birthData, setBirthData] = useState({
@@ -96,10 +98,7 @@ const App = () => {
             <header className="pt-24 pb-16 text-center border-b border-gray-50 mb-12">
                 <div className="max-w-4xl mx-auto px-6">
                     <h1 className="text-4xl md:text-5xl font-bold tracking-[0.5em] text-gray-800 mb-6 font-serif">四柱推命</h1>
-                    <div className="w-16 h-px bg-gray-200 mx-auto mb-6"></div>
-                    <p className="text-gray-400 text-sm md:text-base tracking-[0.2em] font-light leading-relaxed">
-                        AIが解き明かす四柱推命の深淵<br />自己の本質と一生の運勢を完全解析
-                    </p>
+                    <div className="w-16 h-px bg-gray-200 mx-auto"></div>
                 </div>
             </header>
 
@@ -184,7 +183,12 @@ const App = () => {
                             <div className="prose-jp text-gray-600 min-h-[200px] animate-in fade-in duration-500">
                                 {fortuneData ? (
                                     <>
-                                        <p className="leading-relaxed whitespace-pre-wrap">{fortuneData.fortunes[activeFortuneTab]}</p>
+                                        <div
+                                            className="leading-relaxed whitespace-pre-wrap markdown-content"
+                                            dangerouslySetInnerHTML={{
+                                                __html: DOMPurify.sanitize(marked(fortuneData.fortunes[activeFortuneTab] || ''))
+                                            }}
+                                        />
 
                                         {activeFortuneTab === 'today' && fortuneData.fortunes.luckyPoints && (
                                             <div className="mt-12 grid grid-cols-2 md:grid-cols-5 gap-3">
