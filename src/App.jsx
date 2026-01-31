@@ -30,7 +30,7 @@ const App = () => {
     const [activeFortuneTab, setActiveFortuneTab] = useState('');
 
     useEffect(() => {
-        document.title = result ? "四柱推命 鑑定結果" : "四柱推命";
+        document.title = "四柱推命";
     }, [result]);
 
     const cleanText = (text) => {
@@ -94,25 +94,46 @@ const App = () => {
                             accumulatedText += content;
 
                             // リアルタイムに状態を更新
-                            if (['nature', 'social', 'partner', 'job_success'].includes(topic)) {
-                                setFortuneData(prev => ({
-                                    ...prev,
-                                    [topic === 'job_success' ? 'jobSuccess' : topic]: accumulatedText
-                                }));
-                            } else {
-                                setFortuneData(prev => ({
-                                    ...prev,
-                                    fortunes: {
-                                        ...prev.fortunes,
-                                        [topic]: accumulatedText
-                                    }
-                                }));
-                            }
+                            const updateState = (text) => {
+                                if (['nature', 'social', 'partner', 'job_success'].includes(topic)) {
+                                    setFortuneData(prev => ({
+                                        ...prev,
+                                        [topic === 'job_success' ? 'jobSuccess' : topic]: text
+                                    }));
+                                } else {
+                                    setFortuneData(prev => ({
+                                        ...prev,
+                                        fortunes: {
+                                            ...prev.fortunes,
+                                            [topic]: text
+                                        }
+                                    }));
+                                }
+                            };
+                            updateState(accumulatedText);
                         } catch (e) {
                             // 無視
                         }
                     }
                 }
+            }
+            // Flush decoder
+            accumulatedText += decoder.decode();
+
+            // Final update after flush
+            if (['nature', 'social', 'partner', 'job_success'].includes(topic)) {
+                setFortuneData(prev => ({
+                    ...prev,
+                    [topic === 'job_success' ? 'jobSuccess' : topic]: accumulatedText
+                }));
+            } else {
+                setFortuneData(prev => ({
+                    ...prev,
+                    fortunes: {
+                        ...prev.fortunes,
+                        [topic]: accumulatedText
+                    }
+                }));
             }
 
             // luckyPointsの抽出（todayのみ、最後の方に付与される想定）
