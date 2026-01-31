@@ -169,10 +169,10 @@ const App = () => {
             if (retryCount > 0) {
                 console.log(`Retrying ${topic}... (${retryCount} attempts left)`);
                 setLoadingMessage(prev => ({ ...prev, [topic]: `通信エラー。再接続中...` }));
-                // 3秒待機してからリトライ（コンテキストを維持）
+                // 1.5秒待機してからリトライ（コンテキストを維持）
                 setTimeout(() => {
                     fetchFortuneItem(topic, currentBazi, currentElements, accumulatedText, retryCount - 1);
-                }, 3000);
+                }, 1500);
             } else {
                 setLoadingItems(prev => ({ ...prev, [topic]: false }));
                 setErrorInfo({ title: '鑑定エラー', message: `${labels[topic] || topic}の生成が中断されました。再鑑定をお試しください。` });

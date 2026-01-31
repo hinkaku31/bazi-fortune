@@ -116,21 +116,25 @@ ${volumeInstruction}
 鑑定を開始せよ：`;
         }
 
-        // リトライ機能付きのフェッチ処理（タイムアウト延長 45秒）
+        // リトライ機能付きのフェッチ処理（タイムアウト延長 60秒）
         const fetchWithRetry = async (url, options, retries = 3, backoff = 2000) => {
             for (let i = 0; i < retries; i++) {
                 const controller = new AbortController();
-                const id = setTimeout(() => controller.abort(), 45000); // 45秒タイムアウト
+                const id = setTimeout(() => controller.abort(), 60000); // 60秒タイムアウト
 
                 try {
                     const response = await fetch(url, { ...options, signal: controller.signal });
                     clearTimeout(id);
 
-                    if (response.ok) return response;
+                    if (response.ok) {
+                        console.log(`[API Success] Status: ${response.status}`);
+                        return response;
+                    }
+
+                    const errorText = await response.text();
+                    console.warn(`[API Error] Attempt ${i + 1} failed: Status ${response.status}`, errorText);
 
                     if (response.status === 429 || response.status >= 500) {
-                        const errorText = await response.text();
-                        console.warn(`Attempt ${i + 1} failed: ${response.status}`, errorText);
                         await new Promise(resolve => setTimeout(resolve, backoff * (i + 1)));
                         continue;
                     }
@@ -138,7 +142,7 @@ ${volumeInstruction}
                     return response;
                 } catch (error) {
                     clearTimeout(id);
-                    console.warn(`Attempt ${i + 1} network error:`, error);
+                    console.warn(`[Network Error] Attempt ${i + 1}:`, error);
                     await new Promise(resolve => setTimeout(resolve, backoff * (i + 1)));
                 }
             }
@@ -192,8 +196,10 @@ ${existingText}
 
         // ストリーミング処理の堅牢化（バックグラウンド実行）
         context.waitUntil((async () => {
+            let buffer = "";
+            let inThought = false; // <thought>タグ内かどうかのフラグ
+
             try {
-                let buffer = "";
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
@@ -210,21 +216,44 @@ ${existingText}
                             try {
                                 const json = JSON.parse(line.slice(6));
                                 // DeepSeek R1の思考プロセス(reasoning)を除外し、コンテンツのみ抽出
-                                const content = json.choices[0]?.delta?.content || "";
+                                let content = json.choices[0]?.delta?.content || "";
 
+                                // <thought>タグの除去ロジック
                                 if (content) {
-                                    await writer.write(encoder.encode(content));
+                                    // タグの開始を検知
+                                    if (content.includes('<thought>')) {
+                                        inThought = true;
+                                        content = content.replace(/<thought>[\s\S]*/, '');
+                                    }
+
+                                    // タグの終了を検知
+                                    if (inThought) {
+                                        if (content.includes('</thought>')) {
+                                            inThought = false;
+                                            content = content.replace(/[\s\S]*<\/thought>/, '');
+                                        } else {
+                                            content = ""; // タグ内なので全て無視
+                                        }
+                                    } else {
+                                        // 通常のタグ除去（一行に含まれる場合）
+                                        content = content.replace(/<thought>[\s\S]*?<\/thought>/g, '');
+                                    }
+
+                                    if (content) {
+                                        await writer.write(encoder.encode(content));
+                                    }
                                 }
                             } catch (e) {
-                                console.warn("JSON Parse Error (ignoring chunk):", e.message);
+                                console.warn("[Stream Parse Error] Ignoring chunk:", e.message, "Line:", line);
                                 // 無視して次へ
                             }
                         }
                     }
                 }
             } catch (err) {
-                console.error("Stream processing error:", err);
-                await writer.write(encoder.encode("\n\n[システム通信エラー: ページを再読み込みするか、しばらくして再試行してください]"));
+                console.error("[Fatal Stream Error]", err);
+                // エラーをクライアントに通知する手段があれば良いが、ここではログ出力に留める
+                // クライアント側でタイムアウトまたはエラーハンドリングが行われる
             } finally {
                 await writer.close();
             }
