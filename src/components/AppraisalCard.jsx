@@ -15,7 +15,12 @@ const AppraisalCard = ({ title, char, description, type = 'nature' }) => {
 
             <div className="prose-jp max-w-none text-gray-700 leading-relaxed font-light">
                 <p className="mb-4 text-center text-gray-500 italic">
-                    あなたの{title}を表す「{type === 'nature' ? '日主' : type === 'social' ? '月支' : '日支'}」は、{char}です。
+                    あなたの{title}を表す「{
+                        type === 'nature' ? '日主' :
+                            type === 'social' ? '月支' :
+                                type === 'partner' ? '日支' :
+                                    '時支'
+                    }」は、{char}です。
                 </p>
                 <div
                     className="markdown-content"

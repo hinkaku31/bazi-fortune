@@ -27,7 +27,11 @@ const App = () => {
     const [loadingItems, setLoadingItems] = useState({});
     const [loadingMessage, setLoadingMessage] = useState({});
     const [errorInfo, setErrorInfo] = useState(null);
-    const [activeFortuneTab, setActiveFortuneTab] = useState('today');
+    const [activeFortuneTab, setActiveFortuneTab] = useState('');
+
+    useEffect(() => {
+        document.title = result ? "四柱推命 鑑定結果" : "四柱推命";
+    }, [result]);
 
     const cleanText = (text) => {
         if (!text) return '';
@@ -129,7 +133,8 @@ const App = () => {
             const elements = calculateElements(bazi);
 
             setResult({ bazi, elements });
-            setActiveFortuneTab('today');
+            setActiveFortuneTab('');
+            setLoading(false);
 
             // 順次生成（本質→社会→パートナー→適職）
             await fetchFortuneItem('nature', bazi, elements);
