@@ -45,18 +45,31 @@ const AppraisalCard = ({ title, char, description, type = 'nature', loading, loa
                     </div>
                 )}
 
-                {!loading && (error || !description) && (
+                {!loading && !description && !error && (
+                    <div className="flex flex-col items-center justify-center py-6">
+                        <button
+                            onClick={onResume}
+                            className="px-8 py-3 bg-gradient-to-r from-jp-gold to-yellow-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 font-bold flex items-center"
+                        >
+                            <Sparkles size={18} className="mr-2 animate-pulse" />
+                            {title}を詳しく鑑定する
+                        </button>
+                        <p className="mt-3 text-xs text-gray-400">※ボタンを押すと鑑定が始まります</p>
+                    </div>
+                )}
+
+                {!loading && (error || (!description && loading)) && ( // Adjusted logic: if error exists OR stuck in weird state
                     <div className="flex flex-col items-center justify-center py-8 space-y-4">
                         <div className="flex items-center text-red-400 text-sm">
                             <AlertCircle size={16} className="mr-2" />
-                            鑑定が一時停止しました
+                            {error ? '鑑定が一時停止しました' : '鑑定を開始できませんでした'}
                         </div>
                         <button
                             onClick={onResume}
                             className="px-8 py-2 border border-jp-gold text-jp-gold rounded-full hover:bg-jp-gold hover:text-white transition-all duration-300 text-sm flex items-center"
                         >
                             <TrendingUp size={16} className="mr-2" />
-                            鑑定の続きを依頼する
+                            {error ? '鑑定の続きを依頼する' : '再試行する'}
                         </button>
                     </div>
                 )}

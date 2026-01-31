@@ -197,14 +197,18 @@ const App = () => {
             const elements = calculateElements(bazi);
 
             setResult({ bazi, elements });
-            setActiveFortuneTab('');
+            setActiveFortuneTab('today'); // 初期タブは今日
             setLoading(false);
 
-            // 順次生成（本質→社会→パートナー→適職）
-            await fetchFortuneItem('nature', bazi, elements);
-            await fetchFortuneItem('social', bazi, elements);
-            await fetchFortuneItem('partner', bazi, elements);
-            await fetchFortuneItem('job_success', bazi, elements);
+            // 自動生成は行わず、ユーザーのボタンクリック（オンデマンド）で生成する
+            // nature, social, partner, job_success は空のまま
+
+            // 「今日の運勢」だけはユーザー体験のため自動生成しても良いが、
+            // 「全項目を一度に頼んでいる...分散」という指示に従い、
+            // 今日の運勢だけ自動取得し、他はボタン待ちにするのがベストプラクティス。
+            // ユーザーは「今日の運勢」を見に来るため。
+            await fetchFortuneItem('today', bazi, elements);
+
         } catch (err) {
             console.error(err);
             setErrorInfo({ title: '解析失敗', message: '命式の計算中にエラーが発生しました。' });
@@ -214,8 +218,13 @@ const App = () => {
     };
 
     useEffect(() => {
-        if (result && activeFortuneTab !== 'luckyPoints' && !fortuneData.fortunes[activeFortuneTab]) {
-            fetchFortuneItem(activeFortuneTab);
+        // タブ切り替え時にデータがなければ取得する（遅延ロード）
+        if (result && activeFortuneTab && !fortuneData.fortunes[activeFortuneTab] && ['today', 'tomorrow', 'thisWeek', 'thisMonth', 'thisYear'].includes(activeFortuneTab)) {
+            // 運勢タブは切り替え時に自動取得（待機時間を少し設けることでAPI負荷分散）
+            const timer = setTimeout(() => {
+                fetchFortuneItem(activeFortuneTab);
+            }, 800); // 0.8秒待機
+            return () => clearTimeout(timer);
         }
     }, [activeFortuneTab, result]);
 
