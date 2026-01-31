@@ -187,18 +187,17 @@ const App = () => {
                                         <p className="leading-relaxed whitespace-pre-wrap">{fortuneData.fortunes[activeFortuneTab]}</p>
 
                                         {activeFortuneTab === 'today' && fortuneData.fortunes.luckyPoints && (
-                                            <div className="mt-12 grid grid-cols-1 md:grid-cols-5 gap-4">
+                                            <div className="mt-12 grid grid-cols-2 md:grid-cols-5 gap-3">
                                                 {[
-                                                    { label: 'カラー', val: fortuneData.fortunes.luckyPoints.color, icon: '🎨' },
-                                                    { label: 'スポット', val: fortuneData.fortunes.luckyPoints.spot, icon: '📍' },
-                                                    { label: 'フード', val: fortuneData.fortunes.luckyPoints.food, icon: '🍱' },
-                                                    { label: 'アイテム', val: fortuneData.fortunes.luckyPoints.item, icon: '💎' },
-                                                    { label: 'アクション', val: fortuneData.fortunes.luckyPoints.action, icon: '✨' }
+                                                    { label: 'Color', val: fortuneData.fortunes.luckyPoints.color },
+                                                    { label: 'Spot', val: fortuneData.fortunes.luckyPoints.spot },
+                                                    { label: 'Food', val: fortuneData.fortunes.luckyPoints.food },
+                                                    { label: 'Item', val: fortuneData.fortunes.luckyPoints.item },
+                                                    { label: 'Action', val: fortuneData.fortunes.luckyPoints.action }
                                                 ].map((p) => (
-                                                    <div key={p.label} className="bg-gray-50 p-4 rounded-xl text-center border border-gray-100/50">
-                                                        <span className="text-xl mb-2 block">{p.icon}</span>
-                                                        <span className="text-[10px] text-gray-400 uppercase tracking-widest block mb-1">{p.label}</span>
-                                                        <span className="text-sm font-bold text-jp-dark">{p.val}</span>
+                                                    <div key={p.label} className="py-4 px-2 border-b border-gray-100/80 text-center">
+                                                        <span className="text-[9px] text-gray-400 uppercase tracking-[0.2em] block mb-2">{p.label}</span>
+                                                        <span className="text-xs font-medium text-jp-dark tracking-wider leading-relaxed">{p.val}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -223,24 +222,24 @@ const App = () => {
             </main>
             <footer className="mt-20 pt-16 pb-12 text-center border-t border-gray-50">
                 <div className="max-w-4xl mx-auto px-6 mb-12">
-                    <p className="text-[10px] text-gray-400 tracking-[0.2em] uppercase mb-8">Share your destiny with the world</p>
-                    <div className="flex flex-wrap justify-center gap-3">
+                    <p className="text-[9px] text-gray-300 tracking-[0.3em] uppercase mb-10">Share this session</p>
+                    <div className="flex flex-wrap justify-center gap-4">
                         {[
-                            { name: 'X', color: 'bg-black', url: `https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent('本格四柱推命：AIが解き明かす運命の深淵')}` },
-                            { name: 'Facebook', color: 'bg-[#1877F2]', url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}` },
-                            { name: 'LINE', color: 'bg-[#06C755]', url: `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(window.location.href)}` },
-                            { name: 'Instagram', color: 'bg-gradient-to-tr from-[#F58529] via-[#D6249F] to-[#285AEB]', url: 'https://www.instagram.com/' },
-                            { name: 'Threads', color: 'bg-black', url: `https://www.threads.net/intent/post?text=${encodeURIComponent('本格四柱推命で自分の本質を鑑定しました：' + window.location.href)}` },
-                            { name: 'Pinterest', color: 'bg-[#E60023]', url: `https://www.pinterest.com/pin/create/button/?url=${encodeURIComponent(window.location.href)}` },
+                            { name: 'X', color: 'bg-black', label: 'X', url: `https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent('本格四柱推命：AIが解き明かす運命の深淵')}` },
+                            { name: 'Facebook', color: 'bg-[#1877F2]', label: 'F', url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}` },
+                            { name: 'LINE', color: 'bg-[#06C755]', label: 'L', url: `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(window.location.href)}` },
+                            { name: 'Instagram', color: 'bg-gradient-to-tr from-[#F58529] via-[#D6249F] to-[#285AEB]', label: 'I', url: 'https://www.instagram.com/' },
+                            { name: 'Threads', color: 'bg-black', label: 'T', url: `https://www.threads.net/intent/post?text=${encodeURIComponent('本格四柱推命で自分の本質を鑑定しました：' + window.location.href)}` },
+                            { name: 'Pinterest', color: 'bg-[#E60023]', label: 'P', url: `https://www.pinterest.com/pin/create/button/?url=${encodeURIComponent(window.location.href)}` },
                         ].map((sns) => (
-                            <a key={sns.name} href={sns.url} target="_blank" rel="noopener noreferrer"
-                                className={`px-5 py-2.5 rounded-full ${sns.color} text-white text-[10px] font-bold tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-md`}>
-                                {sns.name}
+                            <a key={sns.name} href={sns.url} target="_blank" rel="noopener noreferrer" title={sns.name}
+                                className={`w-10 h-10 rounded-full ${sns.color} text-white text-xs font-bold flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-sm`}>
+                                {sns.label}
                             </a>
                         ))}
-                        <button onClick={handleCopyUrl}
-                            className="px-5 py-2.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-bold tracking-[0.2em] hover:bg-gray-200 active:scale-95 transition-all shadow-sm">
-                            URLコピー
+                        <button onClick={handleCopyUrl} title="Copy URL"
+                            className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 text-[10px] font-bold border border-gray-100 flex items-center justify-center hover:bg-gray-100 active:scale-95 transition-all">
+                            <Layout size={14} />
                         </button>
                     </div>
                 </div>
