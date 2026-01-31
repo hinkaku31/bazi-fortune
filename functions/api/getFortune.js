@@ -14,9 +14,9 @@ export async function onRequestPost(context) {
             });
         }
 
-        if (!env.DEEPSEEK_API_KEY) {
+        if (!env.GROQ_API_KEY) {
             return new Response(JSON.stringify({
-                error: "APIキー (DEEPSEEK_API_KEY) が設定されていません。"
+                error: "APIキー (GROQ_API_KEY) が設定されていません。"
             }), {
                 status: 500,
                 headers: { "Content-Type": "application/json" }
@@ -116,14 +116,14 @@ ${volumeInstruction}
 鑑定を開始せよ：`;
         }
 
-        const response = await fetch('https://api.deepseek.com/chat/completions', {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${context.env.DEEPSEEK_API_KEY}`,
+                'Authorization': `Bearer ${context.env.GROQ_API_KEY}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'deepseek-chat',
+                model: 'llama-3.3-70b-versatile',
                 messages: [
                     { role: 'system', content: systemPrompt },
                     {
