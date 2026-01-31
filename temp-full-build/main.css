@@ -1,10 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;700&display=swap');
+@import "https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap";
+@import "https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;700&display=swap";
 
+/* src/index.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
 :root {
   --bg-pure-white: #ffffff;
   --bg-soft-gray: #f8f9fa;
@@ -13,76 +13,61 @@
   --text-muted: #636e72;
   --gold-accent: #c5a059;
   --red-accent: #b22d35;
-
-  /* 五行Colors (Pastel) */
   --element-wood: #E3F2FD;
   --element-fire: #FFEBEE;
   --element-earth: #FFFDE7;
   --element-metal: #ffffff;
   --element-water: #F5F5F5;
 }
-
 body {
   background-color: var(--bg-pure-white);
   color: var(--text-dark);
-  font-family: 'Shippori Mincho', 'Noto Serif JP', serif;
+  font-family:
+    "Shippori Mincho",
+    "Noto Serif JP",
+    serif;
 }
-
 .jp-card {
   @apply bg-white border border-gray-200 shadow-sm rounded-xl p-6 transition-all duration-300 hover:shadow-md;
 }
-
 .jp-button-primary {
   @apply bg-jp-dark text-white px-8 py-3 rounded-full hover:bg-opacity-90 transition-all font-bold tracking-widest shadow-sm active:scale-95;
 }
-
 .jp-heading {
   @apply text-jp-dark font-bold text-2xl tracking-widest mb-6 flex items-center gap-3;
 }
-
-/* Base text styles for Markdown content */
 .prose-jp {
   @apply text-jp-dark leading-relaxed;
 }
-
 .prose-jp p {
   @apply mb-6;
 }
-
 .prose-jp h1,
 .prose-jp h2,
 .prose-jp h3 {
   @apply text-jp-gold mt-10 mb-6 font-bold border-l-4 border-jp-red pl-4 tracking-wider;
 }
-
 .prose-jp h1 {
   @apply text-2xl;
 }
-
 .prose-jp h2 {
   @apply text-xl;
 }
-
 .prose-jp h3 {
   @apply text-lg;
 }
-
 .prose-jp strong {
   @apply text-jp-gold font-bold;
 }
-
 .prose-jp ul {
   @apply list-disc list-inside mb-6 space-y-2;
 }
-
 .prose-jp ol {
   @apply list-decimal list-inside mb-6 space-y-2;
 }
-
 .prose-jp li {
   @apply ml-2;
 }
-
 .prose-jp hr {
   @apply border-jp-gold/20 my-10;
 }

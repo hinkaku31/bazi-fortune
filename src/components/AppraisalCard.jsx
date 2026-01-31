@@ -1,8 +1,11 @@
 import React from 'react';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 const AppraisalCard = ({ title, char, description, type = 'nature' }) => {
-    // 本来は画像URLを動的に生成・取得するが、ここではプレースホルダ的に十干・十二支を表示
-    // 実際の実装では assets/characters/[char].png のようなパスを想定
+    // MarkdownをHTMLに変換し、サニタイズする
+    const htmlContent = DOMPurify.sanitize(marked(description || ''));
+
     return (
         <div className="jp-card mb-8">
             <div className="flex flex-col items-center mb-6">
@@ -14,13 +17,14 @@ const AppraisalCard = ({ title, char, description, type = 'nature' }) => {
                 <div className="h-1 w-12 bg-gray-800 mt-2"></div>
             </div>
 
-            <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed font-light">
+            <div className="prose-jp max-w-none text-gray-700 leading-relaxed font-light">
                 <p className="mb-4 text-center text-gray-500 italic">
                     あなたの{title}を表す「{type === 'nature' ? '日主' : type === 'social' ? '月支' : '日支'}」は、{char}です。
                 </p>
-                <div className="whitespace-pre-wrap">
-                    {description}
-                </div>
+                <div
+                    className="markdown-content"
+                    dangerouslySetInnerHTML={{ __html: htmlContent }}
+                />
             </div>
         </div>
     );

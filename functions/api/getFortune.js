@@ -23,7 +23,7 @@ export async function onRequestPost(context) {
             });
         }
 
-        const prompt = `あなたはプロの四柱推命鑑定師です。以下の命式（四柱）と五行バランスを持つ方の「${period}の運勢」を、深く、かつ前向きになれるような格調高い和風の言葉遣いで鑑定してください。
+        const prompt = `あなたはプロの四柱推命鑑定師です。以下の命式（四柱）と五行バランスを持つ方の【本質】【社会的性質】【人生のパートナー】、および【運勢診断（今日・明日・今週・今月・今年）】を詳細に鑑定してください。
 
 【命式】
 年柱: ${bazi.nenchuu}
@@ -34,15 +34,26 @@ export async function onRequestPost(context) {
 【五行バランス】
 ${JSON.stringify(elements)}
 
-【時間軸】
-${period}
+【鑑定依頼内容】
+1. あなたの本質：日主の干支を中心に、性格、才能、内面的な強みを1000文字程度で。
+2. 社会的な性質：月支を中心に、仕事運、適職、社会での立ち回りを1000文字程度で。
+3. 人生のパートナー：日支を中心に、惹かれるタイプ、理想の結婚像、関係維持のアドバイスを1000文字程度で。
+4. 運勢診断：現在を起点に、今日、明日、今週、今月、今年の計5項目をそれぞれ300文字程度で。
 
-【構成案】
-1. 総評（その時期のエネルギーの流れを雅やかに表現）
-2. 具体的な傾向（仕事・財運・対人関係などを詳しく）
-3. 開運の指針（ラッキーアクションや心構え）
-
-Markdown形式（見出し、箇条書きなど）で、読んで心が洗われるような文章で出力してください。`;
+【出力形式】
+JSON形式のみで出力してください。Markdownヘッダーや「###」は含めず、純粋なテキストとして各項目を構成してください。
+{
+  "nature": "...",
+  "social": "...",
+  "partner": "...",
+  "fortunes": {
+    "today": "...",
+    "tomorrow": "...",
+    "thisWeek": "...",
+    "thisMonth": "...",
+    "thisYear": "..."
+  }
+}`;
 
         const apiUrl = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -55,9 +66,11 @@ Markdown形式（見出し、箇条書きなど）で、読んで心が洗われ
             body: JSON.stringify({
                 model: "llama-3.3-70b-versatile",
                 messages: [
+                    { role: "system", content: "You are a professional Bazi master. Always respond in Japanese. Output must be valid JSON." },
                     { role: "user", content: prompt }
                 ],
-                temperature: 0.7
+                temperature: 0.7,
+                response_format: { type: "json_object" }
             })
         });
 
@@ -73,18 +86,9 @@ Markdown形式（見出し、箇条書きなど）で、読んで心が洗われ
             });
         }
 
-        const text = data.choices?.[0]?.message?.content;
+        const content = JSON.parse(data.choices?.[0]?.message?.content);
 
-        if (!text) {
-            return new Response(JSON.stringify({
-                error: "鑑定結果を取得できませんでした。"
-            }), {
-                status: 500,
-                headers: { "Content-Type": "application/json" }
-            });
-        }
-
-        return new Response(JSON.stringify({ fortune: text }), {
+        return new Response(JSON.stringify(content), {
             headers: { "Content-Type": "application/json" }
         });
 
