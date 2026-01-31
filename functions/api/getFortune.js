@@ -3,7 +3,7 @@ export async function onRequestPost(context) {
 
     try {
         const body = await request.json();
-        const { bazi, elements, topic } = body;
+        const { bazi, elements, topic, existingText } = body;
 
         if (!bazi || !elements || !topic) {
             return new Response(JSON.stringify({
@@ -49,76 +49,85 @@ ${focus} を中心に、これまでの全記録を凌駕する深さで記述�
 4. **JSONフォーマット**: 必ず以下の形式のJSONで回答してください。
 {
   "content": "「${title}」の、魂を揺さぶるほど詳細で膨大な解説（超長文）..."
-}`;
+}
+上記のようなJSON形式ではなく、**必ず純粋なテキストのみ（Markdown記号なし）**で直接回答を開始してください。
+一冊の学術書に匹敵する情報量を、淀みなく出力し続けてください。`;
         } else {
             const labels = { today: '今日', tomorrow: '明日', thisWeek: '今週', thisMonth: '今月', thisYear: '今年' };
             const label = labels[topic] || topic;
-            prompt = `あなたは運命を司る最高位の占術師であり、星々の瞬きから一寸の狂いもなく未来を見通す預言者です。
-この「${label}」という一瞬の刻において、ユーザーに訪れる運命のすべてを、これまでの全記録を凌駕する超絶的な情報量で執筆してください。
+            prompt = `あなたは星々の運命を司る最高位の占術師です。
+この「${label}」という刻において、ユーザーに訪れる運命のすべてを、圧倒的な情報量で執筆してください。
 
-【最重要指示：3倍以上の文章量】
-この「${label}」の運勢だけに焦点を絞り、従来の最大出力の3倍、文字にして数万文字に及ぶ「圧倒的な言葉の壁」を構築してください。
+提供された命式データ（${JSON.stringify(bazi)}）と五行（${JSON.stringify(elements)}）に基づき、以下の指示に従ってください。
 
-【執筆ルール】
-1. **極限のディテール**: 1日のバイオリズムの変化、出会うべき人の特徴、避けるべき方角、具体的なラッキーアクションの裏付け、運命の分岐点となる瞬間まで、顕微鏡で覗くような細かさで延々と記述してください。
-2. **専門性の徹底**: 四柱推命（地支の刑冲会合、月令の強弱など）のロジックを背景に、なぜそのような運勢になるのかを理論的に、かつ情緒豊かに解説してください。
-3. **ループ・繰り返し禁止**: 同じ結論を繰り返して文字数を稼ぐことは厳禁です。常に新しい視点と具体的な助言を提示し続けてください。
-4. **Markdown記号の完全排除**: 「**」「###」「##」「*」等は絶対に使用不可。美しい日本語と適切な段落、改行のみで構成してください。
-5. **ラッキーポイント（todayのみ）**: topicがtodayの場合、最後に具体的で具体的な「luckyPoints」（color, spot, food, item, action）を、装飾記号なしの純粋なテキストのみで含めてください。
-6. **JSONフォーマット**: 必ず以下の形式のJSONで回答してください。
-{
-  "content": "${label}の運勢の、宇宙の深淵に触れるような超絶詳細解説（超長文）...",
-  "luckyPoints": { "color": "純粋な色名1つ", "spot": "純粋な場所名1つ", "food": "純粋な食べ物名1つ", "item": "純粋な持ち物名1つ", "action": "純粋な行動1つ" } (todayの場合のみ)
-}`;
+【最重要指示】
+1. **純粋なテキスト（Markdownなし）**で直接回答してください。JSON形式は厳禁です。
+2. 従来の3倍以上のボリュームで、具体性（行動、場所、バイオリズム）を極限まで高めてください。
+3. 冗長な繰り返しを避け、常に新的で具体的な洞察を提供し続けてください。
+4. **luckyPoints（todayのみ）**: 最後の一行に、以下の形式で具体的ラッキーポイントを記述してください。
+[LUCKY]色:実在の色名,場所:実在のスポット名,食べ物:実在の料理名,アイテム:実在の持ち物名,アクション:実在の具体的行動[/LUCKY]
+
+鑑定を開始します：`;
         }
 
         const apiUrl = "https://api.groq.com/openai/v1/chat/completions";
 
-        const response = await fetch(apiUrl, {
-            method: "POST",
+        const systemPrompt = `あなたは世界最高峰の泰山流四柱推命正統伝承者です。
+【厳守事項】
+1. 冗長な繰り返しを避け、常に新的で具体的な情報を提供し続けてください。
+2. Markdown記号（**, ###, -, *等）は絶対に使用せず、美しい日本語と改行のみで構成してください。
+3. 読み手を圧倒する情報量と、魂を揺さぶる深い洞察を維持してください。`;
+
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
             headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${env.GROQ_API_KEY}`
+                'Authorization': `Bearer ${context.env.GROQ_API_KEY}`,
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: "llama-3.3-70b-versatile",
+                model: 'llama-3.3-70b-versatile',
                 messages: [
-                    { role: "system", content: "あなたは日本語で回答するプロフェッショナルな四柱推命鑑定師です。JSON形式でのみ回答してください。" },
-                    { role: "user", content: `命式データ: ${JSON.stringify(bazi)}\n五行データ: ${JSON.stringify(elements)}\n\n${prompt}` }
+                    { role: 'system', content: systemPrompt },
+                    {
+                        role: 'user',
+                        content: existingText
+                            ? `以下の鑑定文の続きから執筆を再開してください。
+前文の内容を繰り返さず、途切れた文脈を滑らかに繋いで、さらに深い洞察を続けてください。
+
+【これまでの文章】
+${existingText}
+
+【指示】
+この続きから、具体的かつ膨大な鑑定を再開してください：`
+                            : prompt
+                    }
                 ],
                 temperature: 0.7,
-                response_format: { type: "json_object" }
+                stream: true // ストリーミングを有効化
             })
         });
 
-        const data = await response.json();
-
         if (!response.ok) {
-            return new Response(JSON.stringify({
-                error: "Groq APIエラーが発生しました。",
-                message: data.error?.message || "Unknown error"
-            }), {
+            const error = await response.json();
+            return new Response(JSON.stringify({ error: error.error?.message || 'APIエラー' }), {
                 status: response.status,
-                headers: { "Content-Type": "application/json" }
+                headers: { 'Content-Type': 'application/json' }
             });
         }
 
-        const content = JSON.parse(data.choices[0].message.content);
-
-        return new Response(JSON.stringify(content), {
-            headers: { "Content-Type": "application/json" }
+        // ストリームをそのままクライアントに返す
+        return new Response(response.body, {
+            headers: {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive'
+            }
         });
 
     } catch (error) {
-        return new Response(JSON.stringify({
-            error: "予期せぬエラーが発生しました。",
-            message: error.message
-        }), {
+        return new Response(JSON.stringify({ error: error.message }), {
             status: 500,
-            headers: { "Content-Type": "application/json" }
+            headers: { 'Content-Type': 'application/json' }
         });
     }
 }
-
-
-

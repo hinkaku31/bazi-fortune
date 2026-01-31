@@ -45,7 +45,7 @@ const App = () => {
             .trim();
     };
 
-    const fetchFortuneItem = async (topic, currentBazi, currentElements, retryCount = 1) => {
+    const fetchFortuneItem = async (topic, currentBazi, currentElements, existingText = '', retryCount = 1) => {
         if (loadingItems[topic] && retryCount === 1) return;
 
         const labels = {
@@ -54,10 +54,7 @@ const App = () => {
         };
 
         setLoadingItems(prev => ({ ...prev, [topic]: true }));
-        setLoadingMessage(prev => ({ ...prev, [topic]: `${labels[topic] || topic}を深く解析しています...` }));
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒でタイムアウト（10sより少し余裕を持たせる）
+        setLoadingMessage(prev => ({ ...prev, [topic]: existingText ? `${labels[topic] || topic}を続きから解析中...` : `${labels[topic] || topic}を解析中...` }));
 
         try {
             const response = await fetch('/api/getFortune', {
@@ -66,44 +63,90 @@ const App = () => {
                 body: JSON.stringify({
                     bazi: currentBazi || result?.bazi,
                     elements: currentElements || result?.elements,
-                    topic
-                }),
-                signal: controller.signal
+                    topic,
+                    existingText // 続きから生成するための前文を送る
+                })
             });
 
-            clearTimeout(timeoutId);
-            const data = await response.json();
-
             if (!response.ok) {
+                const data = await response.json();
                 throw new Error(data.error || '不明なエラー');
             }
 
-            if (['nature', 'social', 'partner', 'job_success'].includes(topic)) {
-                setFortuneData(prev => ({
-                    ...prev,
-                    [topic === 'job_success' ? 'jobSuccess' : topic]: data.content
-                }));
-            } else {
-                setFortuneData(prev => ({
-                    ...prev,
-                    fortunes: {
-                        ...prev.fortunes,
-                        [topic]: data.content,
-                        luckyPoints: topic === 'today' ? data.luckyPoints : prev.fortunes.luckyPoints
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let accumulatedText = existingText; // 既存テキストから開始
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const dataStr = line.slice(6);
+                        if (dataStr === '[DONE]') break;
+                        try {
+                            const json = JSON.parse(dataStr);
+                            const content = json.choices[0]?.delta?.content || '';
+                            accumulatedText += content;
+
+                            // リアルタイムに状態を更新
+                            if (['nature', 'social', 'partner', 'job_success'].includes(topic)) {
+                                setFortuneData(prev => ({
+                                    ...prev,
+                                    [topic === 'job_success' ? 'jobSuccess' : topic]: accumulatedText
+                                }));
+                            } else {
+                                setFortuneData(prev => ({
+                                    ...prev,
+                                    fortunes: {
+                                        ...prev.fortunes,
+                                        [topic]: accumulatedText
+                                    }
+                                }));
+                            }
+                        } catch (e) {
+                            // 無視
+                        }
                     }
-                }));
+                }
+            }
+
+            // luckyPointsの抽出（todayのみ、最後の方に付与される想定）
+            if (topic === 'today' && accumulatedText.includes('[LUCKY]')) {
+                const luckyMatch = accumulatedText.match(/\[LUCKY\](.*?)\[\/LUCKY\]/);
+                if (luckyMatch) {
+                    const parts = luckyMatch[1].split(',');
+                    const luckyPoints = {};
+                    parts.forEach(p => {
+                        const [k, v] = p.split(':');
+                        if (k && v) {
+                            const map = { '色': 'color', '場所': 'spot', '食べ物': 'food', 'アイテム': 'item', '行動': 'action' };
+                            luckyPoints[map[k.trim()] || k.trim()] = v.trim();
+                        }
+                    });
+                    setFortuneData(prev => ({
+                        ...prev,
+                        fortunes: { ...prev.fortunes, luckyPoints }
+                    }));
+                    // タグを消去
+                    setFortuneData(prev => ({
+                        ...prev,
+                        fortunes: { ...prev.fortunes, today: accumulatedText.replace(/\[LUCKY\].*?\[\/LUCKY\]/g, '').trim() }
+                    }));
+                }
             }
         } catch (err) {
-            clearTimeout(timeoutId);
             console.error(`Fetch error for ${topic}:`, err);
-
             if (retryCount > 0) {
-                setLoadingMessage(prev => ({ ...prev, [topic]: `再試行しています... (${retryCount})` }));
+                setLoadingMessage(prev => ({ ...prev, [topic]: `再接続しています...` }));
                 await new Promise(resolve => setTimeout(resolve, 2000));
-                return fetchFortuneItem(topic, currentBazi, currentElements, retryCount - 1);
+                return fetchFortuneItem(topic, currentBazi, currentElements, accumulatedText || existingText, retryCount - 1);
             }
-
-            setErrorInfo({ title: '鑑定エラー', message: `${labels[topic] || topic}の生成中に問題が発生しました。再度お試しください。` });
+            setErrorInfo({ title: '鑑定エラー', message: `${labels[topic] || topic}の生成が中断されました。再鑑定をお試しください。` });
         } finally {
             setLoadingItems(prev => ({ ...prev, [topic]: false }));
             setLoadingMessage(prev => ({ ...prev, [topic]: '' }));
@@ -263,13 +306,29 @@ const App = () => {
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                             <div className="lg:col-span-2 space-y-8">
                                 <AppraisalCard title="あなたの本質" char={result.bazi.nicchuu[0]} type="nature"
-                                    description={loadingItems['nature'] ? loadingMessage['nature'] : cleanText(fortuneData.nature) || "解析を待機中..."} />
+                                    description={fortuneData.nature}
+                                    loading={loadingItems['nature']}
+                                    loadingMessage={loadingMessage['nature']}
+                                    error={!loadingItems['nature'] && !fortuneData.nature}
+                                    onResume={() => fetchFortuneItem('nature', result.bazi, result.elements, fortuneData.nature)} />
                                 <AppraisalCard title="社会的な性質" char={result.bazi.gecchuu[1]} type="social"
-                                    description={loadingItems['social'] ? loadingMessage['social'] : cleanText(fortuneData.social) || "解析を待機中..."} />
+                                    description={fortuneData.social}
+                                    loading={loadingItems['social']}
+                                    loadingMessage={loadingMessage['social']}
+                                    error={!loadingItems['social'] && !fortuneData.social}
+                                    onResume={() => fetchFortuneItem('social', result.bazi, result.elements, fortuneData.social)} />
                                 <AppraisalCard title="人生のパートナー" char={result.bazi.nicchuu[1]} type="partner"
-                                    description={loadingItems['partner'] ? loadingMessage['partner'] : cleanText(fortuneData.partner) || "解析を待機中..."} />
+                                    description={fortuneData.partner}
+                                    loading={loadingItems['partner']}
+                                    loadingMessage={loadingMessage['partner']}
+                                    error={!loadingItems['partner'] && !fortuneData.partner}
+                                    onResume={() => fetchFortuneItem('partner', result.bazi, result.elements, fortuneData.partner)} />
                                 <AppraisalCard title="適職と成功の鍵" char={result.bazi.jichuu[1]} type="job_success"
-                                    description={loadingItems['job_success'] ? loadingMessage['job_success'] : cleanText(fortuneData.jobSuccess) || "解析を待機中..."} />
+                                    description={fortuneData.jobSuccess}
+                                    loading={loadingItems['job_success']}
+                                    loadingMessage={loadingMessage['job_success']}
+                                    error={!loadingItems['job_success'] && !fortuneData.jobSuccess}
+                                    onResume={() => fetchFortuneItem('job_success', result.bazi, result.elements, fortuneData.jobSuccess)} />
                             </div>
                             <div className="lg:col-span-1"><AnalysisTable result={result.bazi} rawElements={result.elements} /></div>
                         </div>
@@ -288,53 +347,88 @@ const App = () => {
                             </div>
                             <div className="prose-jp text-gray-600 min-h-[200px] animate-in fade-in duration-500">
                                 {loadingItems[activeFortuneTab] ? (
-                                    <div className="flex items-center justify-center h-40 text-gray-300 italic animate-pulse">
-                                        <Clock size={20} className="mr-2 animate-spin" />
-                                        極限鑑定書を執筆しています...
+                                    <div className="flex flex-col items-center justify-center min-h-[300px] text-gray-300 italic animate-pulse">
+                                        <div className="flex items-center mb-4">
+                                            <Clock size={24} className="mr-3 animate-spin text-jp-gold" />
+                                            <span className="text-xl">{loadingMessage[activeFortuneTab]}</span>
+                                        </div>
+                                        <div className="w-64 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                            <div className="h-full bg-jp-gold animate-progress"></div>
+                                        </div>
                                     </div>
                                 ) : fortuneData.fortunes[activeFortuneTab] ? (
-                                    <>
+                                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
                                         <div
-                                            className="leading-relaxed whitespace-pre-wrap markdown-content"
+                                            className="leading-relaxed whitespace-pre-wrap markdown-content text-gray-700 font-light"
                                             dangerouslySetInnerHTML={{
-                                                __html: DOMPurify.sanitize(marked(cleanText(fortuneData.fortunes[activeFortuneTab])))
+                                                __html: DOMPurify.sanitize(marked.parse(cleanText(fortuneData.fortunes[activeFortuneTab])))
                                             }}
                                         />
-
-                                        {activeFortuneTab === 'today' && fortuneData.fortunes.luckyPoints && (
-                                            <div className="mt-12 grid grid-cols-2 md:grid-cols-5 gap-3">
-                                                {[
-                                                    { label: 'Color', val: fortuneData.fortunes.luckyPoints.color },
-                                                    { label: 'Spot', val: fortuneData.fortunes.luckyPoints.spot },
-                                                    { label: 'Food', val: fortuneData.fortunes.luckyPoints.food },
-                                                    { label: 'Item', val: fortuneData.fortunes.luckyPoints.item },
-                                                    { label: 'Action', val: fortuneData.fortunes.luckyPoints.action }
-                                                ].map((p) => (
-                                                    <div key={p.label} className="py-4 px-2 border-b border-gray-100/80 text-center">
-                                                        <span className="text-[9px] text-gray-400 uppercase tracking-[0.2em] block mb-2">{p.label}</span>
-                                                        <span className="text-xs font-medium text-jp-dark tracking-wider leading-relaxed">{p.val}</span>
-                                                    </div>
-                                                ))}
+                                        {!loadingItems[activeFortuneTab] && (
+                                            <div className="mt-8 flex justify-center">
+                                                <button
+                                                    onClick={() => fetchFortuneItem(activeFortuneTab, result.bazi, result.elements, fortuneData.fortunes[activeFortuneTab])}
+                                                    className="px-6 py-2 border border-jp-gold text-jp-gold rounded-full hover:bg-jp-gold hover:text-white transition-all duration-300 text-sm flex items-center"
+                                                >
+                                                    <TrendingUp size={16} className="mr-2" />
+                                                    さらに詳しく鑑定する
+                                                </button>
                                             </div>
                                         )}
-                                    </>
+                                    </div>
                                 ) : (
-                                    <p className="text-gray-300 italic">鑑定を選択してください。</p>
+                                    <div className="flex flex-col items-center justify-center min-h-[300px] space-y-6">
+                                        <p className="text-gray-400 italic">鑑定を選択してください。</p>
+                                        {activeFortuneTab && (
+                                            <button
+                                                onClick={() => fetchFortuneItem(activeFortuneTab, result.bazi, result.elements)}
+                                                className="jp-btn px-10"
+                                            >
+                                                鑑定を開始
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                                {activeFortuneTab === 'today' && fortuneData.fortunes.luckyPoints && (
+                                    <div className="mt-12 grid grid-cols-2 md:grid-cols-5 gap-3 border-t border-gray-50 pt-8">
+                                        {[
+                                            { label: 'Color', val: fortuneData.fortunes.luckyPoints.color },
+                                            { label: 'Spot', val: fortuneData.fortunes.luckyPoints.spot },
+                                            { label: 'Food', val: fortuneData.fortunes.luckyPoints.food },
+                                            { label: 'Item', val: fortuneData.fortunes.luckyPoints.item },
+                                            { label: 'Action', val: fortuneData.fortunes.luckyPoints.action }
+                                        ].map((p) => (
+                                            <div key={p.label} className="py-4 px-2 border-b border-gray-100/80 text-center">
+                                                <span className="text-[9px] text-gray-400 uppercase tracking-[0.2em] block mb-2">{p.label}</span>
+                                                <span className="text-xs font-medium text-jp-dark tracking-wider leading-relaxed">{p.val}</span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 )}
                             </div>
                         </div>
+
                         {errorInfo && (
                             <div className="p-6 bg-red-50 border border-red-100 text-red-600 rounded-xl flex items-start gap-4">
-                                <AlertCircle size={20} className="mt-1 flex-shrink-0" /><div className="text-sm"><strong>{errorInfo.title}</strong><br />{errorInfo.message}</div>
+                                <AlertCircle size={20} className="mt-1 flex-shrink-0" />
+                                <div className="text-sm">
+                                    <strong>{errorInfo.title}</strong>
+                                    <br />
+                                    {errorInfo.message}
+                                </div>
                             </div>
                         )}
                     </div>
                 )}
+
                 <div className="mt-24 border border-gray-100 rounded-xl p-8 text-center bg-gray-50/50">
                     <span className="text-[10px] text-gray-300 tracking-[0.3em] uppercase block mb-4">Sponsor Link</span>
-                    <div className="h-24 flex items-center justify-center border border-dashed border-gray-200 text-gray-300 text-sm font-light">ここにスポンサーリンクが表示されます</div>
+                    <div className="h-24 flex items-center justify-center border border-dashed border-gray-200 text-gray-300 text-sm font-light">
+                        ここにスポンサーリンクが表示されます
+                    </div>
                 </div>
             </main>
+
             <footer className="mt-20 pt-16 pb-12 text-center border-t border-gray-50">
                 <div className="max-w-4xl mx-auto px-6 mb-12">
                     <p className="text-[9px] text-gray-300 tracking-[0.3em] uppercase mb-10">Share this session</p>
@@ -347,10 +441,14 @@ const App = () => {
                             { name: 'Threads', color: 'bg-black', label: 'T', url: `https://www.threads.net/intent/post?text=${encodeURIComponent('本格四柱推命で自分の本質を鑑定しました：' + window.location.href)}` },
                             { name: 'Pinterest', color: 'bg-[#E60023]', label: 'P', url: `https://www.pinterest.com/pin/create/button/?url=${encodeURIComponent(window.location.href)}` },
                         ].map((sns) => (
-                            <a key={sns.name} href={sns.url} target="_blank" rel="noopener noreferrer" title={sns.name}
-                                className={`w-8 h-8 rounded-full ${sns.color} text-white text-[10px] font-bold flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-sm`}>
+                            <button
+                                key={sns.name}
+                                onClick={() => window.open(sns.url, '_blank')}
+                                title={sns.name}
+                                className={`w-8 h-8 rounded-full ${sns.color} text-white text-[10px] font-bold flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-sm`}
+                            >
                                 {sns.label}
-                            </a>
+                            </button>
                         ))}
                         <button onClick={handleCopyUrl} title="Copy URL"
                             className="w-8 h-8 rounded-full bg-gray-50 text-gray-400 text-[10px] font-bold border border-gray-100 flex items-center justify-center hover:bg-gray-100 active:scale-95 transition-all">
@@ -358,9 +456,12 @@ const App = () => {
                         </button>
                     </div>
                 </div>
-                <p className="text-[10px] tracking-[0.5em] text-gray-300 uppercase mb-4">&copy; 2026 BAJI FORTUNE / AI ANALYSIS</p>
+                <div className="text-[10px] text-gray-400 tracking-widest uppercase pb-12">
+                    &copy; {new Date().getFullYear()} 四柱推命 鑑定. All Rights Reserved.
+                </div>
             </footer>
         </div>
     );
 };
+
 export default App;
