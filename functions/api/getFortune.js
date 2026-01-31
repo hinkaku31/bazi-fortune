@@ -14,9 +14,9 @@ export async function onRequestPost(context) {
             });
         }
 
-        if (!env.GROQ_API_KEY) {
+        if (!env.DEEPSEEK_API_KEY) {
             return new Response(JSON.stringify({
-                error: "APIキー (GROQ_API_KEY) が設定されていません。"
+                error: "APIキー (DEEPSEEK_API_KEY) が設定されていません。"
             }), {
                 status: 500,
                 headers: { "Content-Type": "application/json" }
@@ -33,7 +33,7 @@ export async function onRequestPost(context) {
             tomorrow: '明日',
             thisWeek: '今週',
             thisMonth: '今月',
-            thisYear: '今年'
+            thisYear: '今年の運勢'
         };
 
         const systemPrompt = `あなたは現実世界で数多の成功者を輩出してきた「伝説の鑑定士」です。
@@ -116,16 +116,14 @@ ${volumeInstruction}
 鑑定を開始せよ：`;
         }
 
-        const apiUrl = "https://api.groq.com/openai/v1/chat/completions";
-
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        const response = await fetch('https://api.deepseek.com/chat/completions', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${context.env.GROQ_API_KEY}`,
+                'Authorization': `Bearer ${context.env.DEEPSEEK_API_KEY}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'llama-3.3-70b-versatile',
+                model: 'deepseek-chat',
                 messages: [
                     { role: 'system', content: systemPrompt },
                     {
@@ -143,6 +141,7 @@ ${existingText}
                     }
                 ],
                 temperature: 0.7,
+                max_tokens: 4000,
                 stream: true // ストリーミングを有効化
             })
         });
