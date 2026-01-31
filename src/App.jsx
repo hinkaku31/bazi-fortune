@@ -75,8 +75,24 @@ const App = () => {
         return labels[key] || '';
     };
 
+    const [showCopyToast, setShowCopyToast] = useState(false);
+
+    const handleCopyUrl = () => {
+        navigator.clipboard.writeText(window.location.href);
+        setShowCopyToast(true);
+        setTimeout(() => setShowCopyToast(false), 2000);
+    };
+
     return (
         <div className="min-h-screen bg-white text-[#2d3436] font-serif selection:bg-gray-100 pb-20">
+            {showCopyToast && (
+                <div className="fixed top-12 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in zoom-in duration-300">
+                    <div className="bg-jp-dark text-white px-8 py-3 rounded-full shadow-2xl text-sm font-bold tracking-widest border border-white/10 backdrop-blur-md">
+                        URLをクリップボードにコピーしました
+                    </div>
+                </div>
+            )}
+
             <header className="pt-24 pb-16 text-center border-b border-gray-50 mb-12">
                 <div className="max-w-4xl mx-auto px-6">
                     <h1 className="text-4xl md:text-5xl font-bold tracking-[0.5em] text-gray-800 mb-6 font-serif">四柱推命</h1>
@@ -156,15 +172,41 @@ const App = () => {
                                 <h2 className="text-xl font-bold tracking-widest">これからの運勢</h2>
                             </div>
                             <div className="flex flex-wrap gap-2 mb-8">
-                                {fortuneData && fortuneData.fortunes && Object.keys(fortuneData.fortunes).map((key) => (
-                                    <button key={key} onClick={() => setActiveFortuneTab(key)}
-                                        className={`px-4 py-2 rounded-lg text-sm transition-all ${activeFortuneTab === key ? 'bg-jp-gold text-white font-bold' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}>
-                                        {getFortuneLabel(key)}
-                                    </button>
-                                ))}
+                                {fortuneData && fortuneData.fortunes && Object.keys(fortuneData.fortunes)
+                                    .filter(key => key !== 'luckyPoints')
+                                    .map((key) => (
+                                        <button key={key} onClick={() => setActiveFortuneTab(key)}
+                                            className={`px-4 py-2 rounded-lg text-sm transition-all ${activeFortuneTab === key ? 'bg-jp-gold text-white font-bold' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}>
+                                            {getFortuneLabel(key)}
+                                        </button>
+                                    ))}
                             </div>
                             <div className="prose-jp text-gray-600 min-h-[200px] animate-in fade-in duration-500">
-                                {fortuneData ? <p className="leading-relaxed">{fortuneData.fortunes[activeFortuneTab]}</p> : <p className="text-gray-300 italic">運勢データを生成しています...</p>}
+                                {fortuneData ? (
+                                    <>
+                                        <p className="leading-relaxed whitespace-pre-wrap">{fortuneData.fortunes[activeFortuneTab]}</p>
+
+                                        {activeFortuneTab === 'today' && fortuneData.fortunes.luckyPoints && (
+                                            <div className="mt-12 grid grid-cols-1 md:grid-cols-5 gap-4">
+                                                {[
+                                                    { label: 'カラー', val: fortuneData.fortunes.luckyPoints.color, icon: '🎨' },
+                                                    { label: 'スポット', val: fortuneData.fortunes.luckyPoints.spot, icon: '📍' },
+                                                    { label: 'フード', val: fortuneData.fortunes.luckyPoints.food, icon: '🍱' },
+                                                    { label: 'アイテム', val: fortuneData.fortunes.luckyPoints.item, icon: '💎' },
+                                                    { label: 'アクション', val: fortuneData.fortunes.luckyPoints.action, icon: '✨' }
+                                                ].map((p) => (
+                                                    <div key={p.label} className="bg-gray-50 p-4 rounded-xl text-center border border-gray-100/50">
+                                                        <span className="text-xl mb-2 block">{p.icon}</span>
+                                                        <span className="text-[10px] text-gray-400 uppercase tracking-widest block mb-1">{p.label}</span>
+                                                        <span className="text-sm font-bold text-jp-dark">{p.val}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <p className="text-gray-300 italic">運勢データを生成しています...</p>
+                                )}
                             </div>
                         </div>
                         {errorInfo && (
@@ -181,19 +223,25 @@ const App = () => {
             </main>
             <footer className="mt-20 pt-16 pb-12 text-center border-t border-gray-50">
                 <div className="max-w-4xl mx-auto px-6 mb-12">
-                    <p className="text-[10px] text-gray-400 tracking-[0.2em] uppercase mb-6">Share this session</p>
-                    <div className="flex flex-wrap justify-center gap-4">
+                    <p className="text-[10px] text-gray-400 tracking-[0.2em] uppercase mb-8">Share your destiny with the world</p>
+                    <div className="flex flex-wrap justify-center gap-3">
                         {[
                             { name: 'X', color: 'bg-black', url: `https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent('本格四柱推命：AIが解き明かす運命の深淵')}` },
                             { name: 'Facebook', color: 'bg-[#1877F2]', url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}` },
                             { name: 'LINE', color: 'bg-[#06C755]', url: `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(window.location.href)}` },
-                            { name: 'Pinterest', color: 'bg-[#E60023]', url: `https://www.pinterest.com/pin/create/button/?url=${encodeURIComponent(window.location.href)}` }
+                            { name: 'Instagram', color: 'bg-gradient-to-tr from-[#F58529] via-[#D6249F] to-[#285AEB]', url: 'https://www.instagram.com/' },
+                            { name: 'Threads', color: 'bg-black', url: `https://www.threads.net/intent/post?text=${encodeURIComponent('本格四柱推命で自分の本質を鑑定しました：' + window.location.href)}` },
+                            { name: 'Pinterest', color: 'bg-[#E60023]', url: `https://www.pinterest.com/pin/create/button/?url=${encodeURIComponent(window.location.href)}` },
                         ].map((sns) => (
                             <a key={sns.name} href={sns.url} target="_blank" rel="noopener noreferrer"
-                                className={`px-6 py-2 rounded-full ${sns.color} text-white text-xs font-bold tracking-widest hover:opacity-80 transition-opacity shadow-sm`}>
+                                className={`px-5 py-2.5 rounded-full ${sns.color} text-white text-[10px] font-bold tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-md`}>
                                 {sns.name}
                             </a>
                         ))}
+                        <button onClick={handleCopyUrl}
+                            className="px-5 py-2.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-bold tracking-[0.2em] hover:bg-gray-200 active:scale-95 transition-all shadow-sm">
+                            URLコピー
+                        </button>
                     </div>
                 </div>
                 <p className="text-[10px] tracking-[0.5em] text-gray-300 uppercase mb-4">&copy; 2026 BAJI FORTUNE / AI ANALYSIS</p>
